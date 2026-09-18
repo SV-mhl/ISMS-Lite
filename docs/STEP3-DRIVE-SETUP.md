@@ -1,9 +1,12 @@
-# Step 3 — ตั้งค่า Google Drive (Service Account + Shared Drive)
+# Step 3 — ตั้งค่า Google Drive (OAuth storage identity + Shared Drive)
 
 ให้ backend เก็บ "ต้นฉบับ" ไว้ที่ Shared Drive กลางที่ระบบคุมเอง — สมาชิกไม่ได้สิทธิ์ Drive ตรง
 (นี่คือสิ่งที่ทำให้กติกา "เผยแพร่แล้วโหลดได้แค่ PDF" บังคับได้จริงใน Step 6)
 
-> ต้องมี Google Workspace ของมโหฬาร และทำต่อจากโปรเจกต์ GCP เดียวกับ Step 2
+> ⚠️ **หมายเหตุสำคัญ:** org policy ของมโหฬาร (`iam.managed.disableServiceAccountKeyCreation`)
+> บล็อกการสร้าง Service Account key → เราจึงใช้ **OAuth token ของบัญชี storage** (บัญชีที่ login
+> เข้าแอปและเป็น Content Manager ของ Shared Drive) เป็นตัวตนที่ backend ใช้คุย Drive แทน
+> ผลลัพธ์เหมือนกัน (PDF-only บังคับได้) · *Deferred: ย้ายไป Service Account เมื่อ policy อนุญาต (Post-MVP1.0)*
 
 ---
 
@@ -14,32 +17,22 @@
 
 > ⚠️ **อย่า** เพิ่มพนักงานทั่วไปเป็นสมาชิก Shared Drive นี้ — ให้ทุกคนเข้าถึงเอกสารผ่านแอปเท่านั้น
 
-## 2) สร้าง Service Account
-1. GCP Console → **IAM & Admin → Service Accounts → Create service account**
-2. ชื่อ เช่น `isms-drive` → Create → ข้ามสิทธิ์ (Done)
-3. เปิด service account → แท็บ **Keys → Add key → Create new key → JSON** → ดาวน์โหลดไฟล์ JSON
-4. คัดลอก **อีเมลของ service account** (เช่น `isms-drive@<project>.iam.gserviceaccount.com`)
+## 2) กำหนดบัญชี storage เป็นสมาชิก Shared Drive
+บัญชี storage = บัญชีที่ backend ใช้คุย Drive (ค่าเริ่มต้น = `surachot.vi@maholan.co.th`)
+1. บัญชีนี้ต้อง **login เข้าแอปแล้วอย่างน้อย 1 ครั้ง** (เพื่อให้ระบบมี Drive token) — ✅ ทำแล้ว
+2. บัญชีนี้ต้องเป็น **Content Manager / Manager ของ Shared Drive** `ISMS Repository`
+   - ผู้สร้าง Shared Drive เป็น Manager อยู่แล้วโดยอัตโนมัติ ✅
 
-## 3) เพิ่ม Service Account เป็นสมาชิก Shared Drive
-1. กลับไปที่ Shared Drive `ISMS Repository` → **จัดการสมาชิก**
-2. เพิ่มอีเมล service account → สิทธิ์ **ผู้จัดการเนื้อหา (Content manager)** หรือ **ผู้จัดการ (Manager)**
+> ถ้าจะเปลี่ยนบัญชี storage ในภายหลัง → แก้ `STORAGE_ACCOUNT_EMAIL` ใน `.env.local`
+> (บัญชีใหม่ต้อง login เข้าแอป + เป็นสมาชิก Shared Drive ด้วย)
 
-## 4) ใส่ค่าลงโปรเจกต์
-แปลงไฟล์ JSON key เป็น base64 แล้วใส่ `.env.local`:
-
-```bash
-# macOS/Linux/Git-Bash
-base64 -w0 path/to/key.json        # คัดลอกผลลัพธ์ทั้งบรรทัด
-
-# Windows PowerShell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("path\to\key.json"))
-```
-
+## 3) ใส่ค่าลงโปรเจกต์
 `.env.local`:
 ```
-GOOGLE_SA_KEY_B64=<base64 ที่ได้>
+STORAGE_ACCOUNT_EMAIL=surachot.vi@maholan.co.th
 ISMS_SHARED_DRIVE_ID=<Shared Drive ID จากข้อ 1>
 ```
+(ไม่ต้องมี Service Account key แล้ว)
 
 ## 5) สร้างโฟลเดอร์ 18 กระบวนการ
 1. `npm run dev` → login เป็น **admin** (โปรโมทด้วย `npm run promote-admin -- you@maholan.co.th`)
@@ -55,6 +48,7 @@ ISMS_SHARED_DRIVE_ID=<Shared Drive ID จากข้อ 1>
 ---
 
 ### หมายเหตุ
-- Service account ไม่นับเป็น "คน" → ต้นฉบับเป็นของ Shared Drive (องค์กร) ไม่หายเมื่อ admin ลาออก
+- ต้นฉบับถูกสร้างใน Shared Drive → เป็นของ **องค์กร** (ไม่หายเมื่อคนออก) แม้ตัวตนที่สั่งงานจะเป็น OAuth ของ storage user
+- ถ้า storage user เพิกถอนสิทธิ์/ออกจากองค์กร → เปลี่ยน `STORAGE_ACCOUNT_EMAIL` เป็นบัญชีอื่น (ต้อง login + เป็นสมาชิก Shared Drive)
 - ขนาดไฟล์สูงสุดต่อการอัปโหลด 25 MB (ปรับได้ภายหลัง)
-- `GOOGLE_SA_KEY_B64` = ความลับ ห้าม commit (อยู่ใน `.env.local` ที่ gitignore แล้ว)
+- **Post-MVP1.0:** เมื่อ org policy อนุญาต ให้ย้ายไปใช้ Service Account (ตัวตนกลาง ไม่ผูกคน) — โค้ดเผื่อไว้แล้ว

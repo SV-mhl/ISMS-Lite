@@ -6,41 +6,59 @@
 
 import { google, type drive_v3 } from "googleapis";
 import { Readable } from "node:stream";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
+import { getValidAccessToken } from "@/lib/google/tokens";
 
 export class DriveConfigError extends Error {}
 
-let cached: { drive: drive_v3.Drive; driveId: string } | null = null;
+const STORAGE_EMAIL =
+  process.env.STORAGE_ACCOUNT_EMAIL ?? "surachot.vi@maholan.co.th";
 
-function getConfig(): { drive: drive_v3.Drive; driveId: string } {
-  if (cached) return cached;
-
-  const b64 = process.env.GOOGLE_SA_KEY_B64;
+/**
+ * Build a Drive client that acts as the designated "storage account".
+ * NOTE: org policy blocks Service Account keys (iam.managed.disable
+ * ServiceAccountKeyCreation), so we use the storage user's OAuth token
+ * (captured at login) instead. The storage user must be a Content Manager
+ * of the Shared Drive. App members are NOT members of the Shared Drive,
+ * which is what keeps "published → PDF only" enforceable (Step 6).
+ * Deferred to post-MVP: migrate to a Service Account when policy allows.
+ */
+async function getDrive(): Promise<{ drive: drive_v3.Drive; driveId: string }> {
   const driveId = process.env.ISMS_SHARED_DRIVE_ID;
-  if (!b64 || !driveId) {
+  if (!driveId) {
     throw new DriveConfigError(
-      "ยังไม่ได้ตั้งค่า Google Drive (GOOGLE_SA_KEY_B64 / ISMS_SHARED_DRIVE_ID) — ดู docs/STEP3-DRIVE-SETUP.md",
+      "ยังไม่ได้ตั้งค่า ISMS_SHARED_DRIVE_ID — ดู docs/STEP3-DRIVE-SETUP.md",
     );
   }
 
-  let key: { client_email: string; private_key: string };
-  try {
-    key = JSON.parse(Buffer.from(b64, "base64").toString("utf8"));
-  } catch {
-    throw new DriveConfigError("GOOGLE_SA_KEY_B64 ไม่ใช่ base64 ของไฟล์ JSON key ที่ถูกต้อง");
+  const [u] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, STORAGE_EMAIL));
+  if (!u) {
+    throw new DriveConfigError(
+      `บัญชี storage (${STORAGE_EMAIL}) ยังไม่เคยเข้าสู่ระบบ — กรุณา login ด้วยบัญชีนี้ก่อน`,
+    );
   }
 
-  const auth = new google.auth.JWT({
-    email: key.client_email,
-    key: key.private_key,
-    scopes: ["https://www.googleapis.com/auth/drive"],
-  });
+  const accessToken = await getValidAccessToken(u.id);
+  const oauth = new google.auth.OAuth2();
+  oauth.setCredentials({ access_token: accessToken });
 
-  cached = { drive: google.drive({ version: "v3", auth }), driveId };
-  return cached;
+  return { drive: google.drive({ version: "v3", auth: oauth }), driveId };
 }
 
 export function isDriveConfigured(): boolean {
-  return Boolean(process.env.GOOGLE_SA_KEY_B64 && process.env.ISMS_SHARED_DRIVE_ID);
+  return Boolean(process.env.ISMS_SHARED_DRIVE_ID);
+}
+
+/** The Shared Drive root id (folders for processes are created here). */
+export function getRootId(): string {
+  const driveId = process.env.ISMS_SHARED_DRIVE_ID;
+  if (!driveId) throw new DriveConfigError("ยังไม่ได้ตั้งค่า ISMS_SHARED_DRIVE_ID");
+  return driveId;
 }
 
 const FOLDER_MIME = "application/vnd.google-apps.folder";
@@ -50,7 +68,7 @@ const sharedParams = { supportsAllDrives: true } as const;
 
 /** Find a folder by name under a parent (idempotent helper). */
 async function findFolder(parentId: string, name: string): Promise<string | null> {
-  const { drive, driveId } = getConfig();
+  const { drive, driveId } = await getDrive();
   const escaped = name.replace(/'/g, "\\'");
   const res = await drive.files.list({
     q: `'${parentId}' in parents and name = '${escaped}' and mimeType = '${FOLDER_MIME}' and trashed = false`,
@@ -65,7 +83,7 @@ async function findFolder(parentId: string, name: string): Promise<string | null
 }
 
 async function createFolder(parentId: string, name: string): Promise<string> {
-  const { drive } = getConfig();
+  const { drive } = await getDrive();
   const res = await drive.files.create({
     requestBody: { name, mimeType: FOLDER_MIME, parents: [parentId] },
     fields: "id",
@@ -77,11 +95,6 @@ async function createFolder(parentId: string, name: string): Promise<string> {
 /** Ensure a folder exists under a parent; returns its id. */
 export async function ensureFolder(parentId: string, name: string): Promise<string> {
   return (await findFolder(parentId, name)) ?? (await createFolder(parentId, name));
-}
-
-/** The Shared Drive root id (folders for processes are created here). */
-export function getRootId(): string {
-  return getConfig().driveId;
 }
 
 export type UploadedFile = {
@@ -99,7 +112,7 @@ export async function uploadFile(
   mimeType: string,
   buffer: Buffer,
 ): Promise<UploadedFile> {
-  const { drive } = getConfig();
+  const { drive } = await getDrive();
   const res = await drive.files.create({
     requestBody: { name, parents: [parentFolderId] },
     media: { mimeType, body: Readable.from(buffer) },
@@ -117,7 +130,7 @@ export async function uploadFile(
 }
 
 export async function getFileMeta(fileId: string) {
-  const { drive } = getConfig();
+  const { drive } = await getDrive();
   const res = await drive.files.get({
     fileId,
     fields: "id,name,mimeType,size,webViewLink,trashed",
@@ -128,7 +141,7 @@ export async function getFileMeta(fileId: string) {
 
 /** Download raw file bytes. */
 export async function downloadFileBuffer(fileId: string): Promise<Buffer> {
-  const { drive } = getConfig();
+  const { drive } = await getDrive();
   const res = await drive.files.get(
     { fileId, alt: "media", ...sharedParams },
     { responseType: "arraybuffer" },
@@ -160,7 +173,7 @@ export async function exportToPdf(
   fileId: string,
   mimeType: string,
 ): Promise<Buffer> {
-  const { drive } = getConfig();
+  const { drive } = await getDrive();
 
   if (mimeType === "application/pdf") {
     return downloadFileBuffer(fileId);
@@ -200,6 +213,6 @@ export async function exportToPdf(
 
 /** Move a file to trash. */
 export async function trashFile(fileId: string): Promise<void> {
-  const { drive } = getConfig();
+  const { drive } = await getDrive();
   await drive.files.update({ fileId, requestBody: { trashed: true }, ...sharedParams });
 }
