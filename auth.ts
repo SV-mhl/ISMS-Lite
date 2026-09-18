@@ -86,8 +86,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
       }
 
-      // refresh role จาก DB เผื่อถูกโปรโมทเป็น admin
-      if (!account && token.uid && !token.role) {
+      // refresh role จาก DB ทุกครั้ง เผื่อถูกโปรโมท/ลดสิทธิ์ (ไม่ต้อง login ใหม่)
+      if (!account && token.uid) {
         const [u] = await db
           .select({ role: users.role })
           .from(users)
