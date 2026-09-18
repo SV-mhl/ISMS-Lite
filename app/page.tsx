@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AppBar from "@/components/appbar";
 import {
   phases,
   traceChain,
@@ -47,16 +48,7 @@ function Card({ module, phaseKey }: { module: Module; phaseKey: PhaseKey }) {
 export default function Home() {
   return (
     <div className="wrap">
-      {/* App bar */}
-      <div className="appbar">
-        <div className="brand">
-          <span className="logo">🛡️</span>
-          <span>ISMS-Lite · มโหฬาร</span>
-        </div>
-        <Link href="/login" className="btn-google">
-          <span aria-hidden>🔐</span> เข้าสู่ระบบด้วย Google
-        </Link>
-      </div>
+      <AppBar />
 
       {/* Header */}
       <header className="hd">

@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { moduleById, allModuleIds, type PhaseKey } from "@/lib/blueprint";
+import { notFound, redirect } from "next/navigation";
+import { auth } from "@/auth";
+import AppBar from "@/components/appbar";
+import { moduleById, type PhaseKey } from "@/lib/blueprint";
 
 const numClass: Record<PhaseKey, string> = {
   p1: "n1", p2: "n2", p3: "n3", p4: "n4", plat: "n5",
@@ -9,16 +11,16 @@ const listClass: Record<PhaseKey, string> = {
   p1: "l1", p2: "l2", p3: "l3", p4: "l4", plat: "l5",
 };
 
-export function generateStaticParams() {
-  return allModuleIds().map((id) => ({ id }));
-}
-
 export default async function ProcessPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
+  const session = await auth();
+  if (!session?.user) redirect(`/login`);
+
   const entry = moduleById[id];
   if (!entry) notFound();
 
@@ -26,15 +28,7 @@ export default async function ProcessPage({
 
   return (
     <div className="wrap">
-      <div className="appbar">
-        <Link href="/" className="brand" style={{ textDecoration: "none" }}>
-          <span className="logo">🛡️</span>
-          <span>ISMS-Lite · มโหฬาร</span>
-        </Link>
-        <Link href="/login" className="btn-google">
-          <span aria-hidden>🔐</span> เข้าสู่ระบบด้วย Google
-        </Link>
-      </div>
+      <AppBar />
 
       <div style={{ padding: "18px 20px" }}>
         <Link href="/" style={{ fontSize: 12.5, color: "#3f6191", fontWeight: 600 }}>

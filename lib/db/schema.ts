@@ -173,6 +173,18 @@ export const eventLog = pgTable(
   ],
 );
 
+// ---------- Google OAuth tokens (for backend Drive calls, Step 3+) ----------
+export const googleAccounts = pgTable("google_accounts", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  scope: text("scope"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ---------- Notifications (in-app inbox; email in Step 5) ----------
 export const notifications = pgTable(
   "notifications",
@@ -201,3 +213,4 @@ export type DocumentVersion = typeof documentVersions.$inferSelect;
 export type WorkflowTask = typeof workflowTasks.$inferSelect;
 export type EventLogEntry = typeof eventLog.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
+export type GoogleAccount = typeof googleAccounts.$inferSelect;
