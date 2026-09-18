@@ -1,12 +1,13 @@
 // Document domain logic: check-in, versioning, listing.
 // Ties together Drive (files) + DB (metadata/state) + event log.
 
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   processes,
   documents,
   documentVersions,
+  workflowTasks,
   users,
   type Process,
 } from "@/lib/db/schema";
@@ -42,15 +43,26 @@ export async function ensureAllProcessFolders(): Promise<number> {
   return created;
 }
 
+export type PendingTask = {
+  type: "review" | "approve";
+  assigneeId: string;
+};
+
 export type DocumentListItem = {
   id: string;
   title: string;
   docCode: string | null;
   status: string;
   versionNo: number | null;
+  currentVersionId: string | null;
+  mimeType: string | null;
   fileName: string | null;
   updatedAt: Date;
   uploadedByName: string | null;
+  createdBy: string;
+  reviewerId: string | null;
+  approverId: string | null;
+  pendingTask: PendingTask | null;
 };
 
 export async function listDocuments(processId: string): Promise<DocumentListItem[]> {
@@ -61,8 +73,13 @@ export async function listDocuments(processId: string): Promise<DocumentListItem
       docCode: documents.docCode,
       status: documents.status,
       updatedAt: documents.updatedAt,
+      createdBy: documents.createdBy,
+      reviewerId: documents.reviewerId,
+      approverId: documents.approverId,
+      currentVersionId: documents.currentVersionId,
       versionNo: documentVersions.versionNo,
       fileName: documentVersions.driveFileName,
+      mimeType: documentVersions.mimeType,
       uploadedByName: users.name,
     })
     .from(documents)
@@ -70,7 +87,24 @@ export async function listDocuments(processId: string): Promise<DocumentListItem
     .leftJoin(users, eq(documentVersions.uploadedBy, users.id))
     .where(eq(documents.processId, processId))
     .orderBy(desc(documents.updatedAt));
-  return rows;
+
+  const ids = rows.map((r) => r.id);
+  const pend = ids.length
+    ? await db
+        .select({
+          documentId: workflowTasks.documentId,
+          taskType: workflowTasks.taskType,
+          assigneeId: workflowTasks.assigneeId,
+        })
+        .from(workflowTasks)
+        .where(
+          and(inArray(workflowTasks.documentId, ids), eq(workflowTasks.status, "pending")),
+        )
+    : [];
+  const byDoc = new Map<string, PendingTask>();
+  for (const t of pend) byDoc.set(t.documentId, { type: t.taskType, assigneeId: t.assigneeId });
+
+  return rows.map((r) => ({ ...r, pendingTask: byDoc.get(r.id) ?? null }));
 }
 
 type FileInput = {

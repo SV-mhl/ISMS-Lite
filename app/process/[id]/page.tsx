@@ -3,8 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import AppBar from "@/components/appbar";
 import DocumentWorkspace from "@/components/document-workspace";
+import ProcessAdminAssignees from "@/components/process-admin-assignees";
 import { moduleById, type PhaseKey } from "@/lib/blueprint";
 import { getProcessBySlug, listDocuments } from "@/lib/documents";
+import { listUsers, getProcessDefaults } from "@/lib/assignees";
 import { isDriveConfigured } from "@/lib/google/drive";
 
 const numClass: Record<PhaseKey, string> = {
@@ -29,11 +31,21 @@ export default async function ProcessPage({
 
   const { module, phase } = entry;
 
+  const currentUser = {
+    id: session.user.id,
+    role: session.user.role ?? "member",
+  };
+
   const process = await getProcessBySlug(id);
   const driveOn = isDriveConfigured();
-  const docs = process
-    ? await listDocuments(process.id)
-    : [];
+  const [docs, users, defaults] = process
+    ? await Promise.all([
+        listDocuments(process.id),
+        listUsers(),
+        getProcessDefaults(process.id),
+      ])
+    : [[], [], { reviewerId: null, approverId: null }];
+
   const docRows = docs.map((d) => ({
     id: d.id,
     title: d.title,
@@ -42,6 +54,10 @@ export default async function ProcessPage({
     fileName: d.fileName,
     updatedAt: d.updatedAt.toISOString(),
     uploadedByName: d.uploadedByName,
+    createdBy: d.createdBy,
+    reviewerId: d.reviewerId,
+    approverId: d.approverId,
+    pendingTask: d.pendingTask,
   }));
 
   return (
@@ -109,7 +125,17 @@ export default async function ProcessPage({
             </div>
           )}
 
-          <DocumentWorkspace slug={id} documents={docRows} />
+          {currentUser.role === "admin" && (
+            <ProcessAdminAssignees slug={id} users={users} defaults={defaults} />
+          )}
+
+          <DocumentWorkspace
+            slug={id}
+            documents={docRows}
+            currentUser={currentUser}
+            users={users}
+            defaults={defaults}
+          />
         </div>
       </div>
     </div>

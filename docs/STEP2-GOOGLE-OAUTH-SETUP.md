@@ -15,11 +15,39 @@
 1. เมนู → **APIs & Services → Library**
 2. ค้น **Google Drive API** → **Enable**
 
-## 3) ตั้งค่า OAuth consent screen
-1. **APIs & Services → OAuth consent screen**
-2. User Type → เลือก **Internal** ⭐ (จำกัดเฉพาะผู้ใช้ในองค์กร @maholan.co.th อัตโนมัติ — ไม่ต้องผ่านการ verify ของ Google)
-3. กรอก App name = `ISMS-Lite`, support email = อีเมลคุณ, developer email = อีเมลคุณ → Save
-4. Scopes → ไม่ต้องเพิ่มด้วยมือ (แอปขอ scope ตอนล็อกอินเอง: `email`, `profile`, `drive.file`)
+## 3) ตั้งค่า OAuth consent screen (Google Auth Platform)
+
+> หน้านี้คือ "หน้าจอขอความยินยอม" ที่ผู้ใช้เห็นตอนกดล็อกอิน Google ต้องตั้งครั้งเดียวก่อนสร้าง Client
+
+**วิธีเข้า:** เมนู ☰ ซ้ายบน → **APIs & Services → OAuth consent screen**
+(ถ้าเด้งไปหน้า **Google Auth Platform** ถือว่าถูกแล้ว — Google ย้ายมาที่นี่)
+
+### ถ้าเห็นปุ่ม "Get started" (โปรเจกต์ใหม่ยังไม่เคยตั้ง)
+คลิก **Get started** แล้วกรอกทีละหน้า:
+
+1. **App Information**
+   - App name: `ISMS-Lite`
+   - User support email: เลือกอีเมลคุณ (`surachot.vi@maholan.co.th`)
+   - → **Next**
+
+2. **Audience** ⭐ (สำคัญที่สุด)
+   - เลือก **Internal** — หมายถึง *เฉพาะบัญชีในองค์กร @maholan.co.th เท่านั้นที่ใช้ได้*
+   - ข้อดี: ไม่ต้องส่ง Google ตรวจ (verification), ไม่มีหน้าจอ "unverified app" สีแดง
+   - 💡 ถ้าเลือก Internal **ไม่ได้** (เป็นสีเทา) = บัญชีที่ใช้ยังไม่ใช่ Google Workspace admin หรือโปรเจกต์ไม่ได้อยู่ใต้องค์กร → ให้ IT ช่วย หรือดูหมายเหตุท้ายเอกสาร
+   - → **Next**
+
+3. **Contact Information**
+   - Email addresses: ใส่อีเมลคุณ (ไว้ให้ Google แจ้งเตือน) → **Next**
+
+4. **Finish** — ติ๊กยอมรับ *User Data Policy* → **Create**
+
+### ถ้าตั้งไว้แล้ว / เห็นแท็บต่าง ๆ
+จะเห็นแท็บ: **Overview · Branding · Audience · Clients · Data Access**
+- **Audience** = ต้องเป็น **Internal** (ถ้าเป็น External ให้เปลี่ยน หรือดูหมายเหตุ)
+- **Data Access** (scopes) = **ไม่ต้องเพิ่มเอง** แอปจะขอ scope ตอนล็อกอิน (`email`, `profile`, `drive.file`)
+- **Branding** = App name/โลโก้ (ใส่แล้วในขั้น Get started)
+
+✅ เสร็จขั้นนี้แล้วไปข้อ 4 (สร้าง OAuth Client ID) ได้เลย
 
 ## 4) สร้าง OAuth Client ID
 1. **APIs & Services → Credentials → Create Credentials → OAuth client ID**
@@ -56,6 +84,14 @@ npm run promote-admin -- someone@maholan.co.th
 ```
 
 ---
+
+### ถ้าเลือก Internal ไม่ได้ (ไม่ใช่ Workspace admin / โปรเจกต์ไม่อยู่ใต้องค์กร)
+ทางเลี่ยงชั่วคราวสำหรับ dev:
+1. Audience → เลือก **External** + **Testing**
+2. เพิ่มอีเมลของคุณใน **Test users**
+3. ล็อกอินได้เฉพาะอีเมลที่เป็น test user (โค้ดยังกัน `@maholan.co.th` อยู่ดี)
+
+> ตอน deploy production ควรกลับมาใช้ **Internal** (ให้ IT/Workspace admin ทำ) เพื่อไม่ต้องผ่าน Google verification
 
 ### หมายเหตุความปลอดภัย
 - **Internal consent screen** = เฉพาะบัญชีในโดเมนองค์กรเท่านั้นที่ใช้ได้ (ชั้นที่ 1)

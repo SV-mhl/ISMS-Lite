@@ -15,6 +15,13 @@
       "when": 1789716242468,
       "tag": "0001_youthful_sandman",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789744603861,
+      "tag": "0002_minor_jean_grey",
+      "breakpoints": true
     }
   ]
 }

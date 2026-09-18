@@ -95,6 +95,9 @@ export const documents = pgTable(
     createdBy: uuid("created_by")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
+    // designated reviewer/approver for the current workflow cycle
+    reviewerId: uuid("reviewer_id").references(() => users.id, { onDelete: "set null" }),
+    approverId: uuid("approver_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

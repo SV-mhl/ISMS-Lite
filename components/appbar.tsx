@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { auth, signOut } from "@/auth";
 import AdminBootstrapButton from "@/components/admin-bootstrap-button";
+import { countInboxTasks } from "@/lib/inbox";
 
 export default async function AppBar() {
   const session = await auth();
   const user = session?.user;
+  const inboxCount = user ? await countInboxTasks(user.id) : 0;
 
   return (
     <div className="appbar">
@@ -15,6 +17,18 @@ export default async function AppBar() {
 
       {user ? (
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <Link href="/inbox" style={{ position: "relative", textDecoration: "none", fontSize: 13, fontWeight: 600, color: "#3f6191" }}>
+            📥 งานของฉัน
+            {inboxCount > 0 && (
+              <span style={{
+                position: "absolute", top: -8, right: -14, background: "#e0492b", color: "#fff",
+                fontSize: 10, fontWeight: 700, minWidth: 17, height: 17, borderRadius: 9,
+                display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 4px",
+              }}>
+                {inboxCount}
+              </span>
+            )}
+          </Link>
           {user.role === "admin" && <AdminBootstrapButton />}
           <span style={{ fontSize: 13, color: "#2f4f7a", fontWeight: 600 }}>
             {user.name ?? user.email}
