@@ -2,7 +2,10 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import AppBar from "@/components/appbar";
+import DocumentWorkspace from "@/components/document-workspace";
 import { moduleById, type PhaseKey } from "@/lib/blueprint";
+import { getProcessBySlug, listDocuments } from "@/lib/documents";
+import { isDriveConfigured } from "@/lib/google/drive";
 
 const numClass: Record<PhaseKey, string> = {
   p1: "n1", p2: "n2", p3: "n3", p4: "n4", plat: "n5",
@@ -25,6 +28,21 @@ export default async function ProcessPage({
   if (!entry) notFound();
 
   const { module, phase } = entry;
+
+  const process = await getProcessBySlug(id);
+  const driveOn = isDriveConfigured();
+  const docs = process
+    ? await listDocuments(process.id)
+    : [];
+  const docRows = docs.map((d) => ({
+    id: d.id,
+    title: d.title,
+    status: d.status,
+    versionNo: d.versionNo,
+    fileName: d.fileName,
+    updatedAt: d.updatedAt.toISOString(),
+    uploadedByName: d.uploadedByName,
+  }));
 
   return (
     <div className="wrap">
@@ -67,22 +85,31 @@ export default async function ProcessPage({
           )}
         </div>
 
-        <div
-          style={{
-            marginTop: 16,
-            maxWidth: 760,
-            background: "#eef4fc",
-            border: "1px dashed #b9d1ee",
-            borderRadius: 12,
-            padding: "16px 18px",
-            fontSize: 13,
-            color: "#2f4f7a",
-            lineHeight: 1.7,
-          }}
-        >
-          <b>พื้นที่ทำงานของกระบวนการนี้</b> (เอกสาร · เช็คอิน Drive · workflow ตรวจ–อนุมัติ
-          · บันทึกเหตุการณ์) กำลังถูกพัฒนาในขั้นตอนถัดไปของแผนงาน — Step 1 (ฐานข้อมูล),
-          Step 3 (เชื่อม Google Drive), Step 4 (workflow)
+        <div style={{ marginTop: 20 }}>
+          <h2 style={{ fontSize: 15, color: "#0d356f", fontWeight: 700, marginBottom: 12 }}>
+            เอกสารในกระบวนการนี้
+          </h2>
+
+          {!driveOn && (
+            <div
+              style={{
+                maxWidth: 900,
+                background: "#fff8e6",
+                border: "1px solid #f0dca0",
+                borderRadius: 12,
+                padding: "12px 16px",
+                fontSize: 12.5,
+                color: "#8a6d1f",
+                lineHeight: 1.7,
+                marginBottom: 14,
+              }}
+            >
+              ⚠️ ยังไม่ได้ตั้งค่า Google Drive (Service Account + Shared Drive) — การเช็คอินจะยัง
+              ทำงานไม่ได้จนกว่าจะตั้งค่าตาม <b>docs/STEP3-DRIVE-SETUP.md</b>
+            </div>
+          )}
+
+          <DocumentWorkspace slug={id} documents={docRows} />
         </div>
       </div>
     </div>

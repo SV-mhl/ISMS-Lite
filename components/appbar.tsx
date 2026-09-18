@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { auth, signOut } from "@/auth";
+import AdminBootstrapButton from "@/components/admin-bootstrap-button";
 
 export default async function AppBar() {
   const session = await auth();
@@ -13,7 +14,8 @@ export default async function AppBar() {
       </Link>
 
       {user ? (
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          {user.role === "admin" && <AdminBootstrapButton />}
           <span style={{ fontSize: 13, color: "#2f4f7a", fontWeight: 600 }}>
             {user.name ?? user.email}
             {user.role === "admin" && (
