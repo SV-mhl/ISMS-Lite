@@ -7,6 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { documents, workflowTasks } from "@/lib/db/schema";
 import { logEvent } from "@/lib/events";
+import { notify, notifyMany } from "@/lib/notify";
 
 export class WorkflowError extends Error {
   status: number;
@@ -85,6 +86,14 @@ export async function submitForReview(params: {
     toStatus: "review",
     metadata: { reviewerId, approverId },
   });
+
+  await notify({
+    recipientId: reviewerId,
+    type: "review_requested",
+    title: "มีเอกสารรอคุณตรวจสอบ",
+    body: `เอกสาร "${doc.title}" ถูกส่งให้คุณตรวจสอบ`,
+    documentId,
+  });
 }
 
 /** Reviewer passes the review → creates the approve task. */
@@ -127,6 +136,21 @@ export async function reviewApprove(params: {
     toStatus: "review",
     metadata: comment ? { comment } : null,
   });
+
+  await notify({
+    recipientId: doc.approverId,
+    type: "approval_requested",
+    title: "มีเอกสารรอคุณอนุมัติ",
+    body: `เอกสาร "${doc.title}" ผ่านการตรวจแล้ว รอคุณอนุมัติ`,
+    documentId,
+  });
+  await notify({
+    recipientId: doc.createdBy,
+    type: "reviewed",
+    title: "เอกสารของคุณผ่านการตรวจแล้ว",
+    body: `เอกสาร "${doc.title}" ผ่านการตรวจ กำลังรอผู้อนุมัติ`,
+    documentId,
+  });
 }
 
 /** Approver approves → status Approved. */
@@ -164,6 +188,14 @@ export async function approverApprove(params: {
     fromStatus: "review",
     toStatus: "approved",
     metadata: comment ? { comment } : null,
+  });
+
+  await notify({
+    recipientId: doc.createdBy,
+    type: "approved",
+    title: "เอกสารของคุณได้รับอนุมัติแล้ว",
+    body: `เอกสาร "${doc.title}" ได้รับอนุมัติ พร้อมเผยแพร่`,
+    documentId,
   });
 }
 
@@ -211,6 +243,14 @@ export async function reject(params: {
     toStatus: "rejected",
     metadata: { comment, stage: approveT ? "approve" : "review" },
   });
+
+  await notify({
+    recipientId: doc.createdBy,
+    type: "rejected",
+    title: "เอกสารถูกตีกลับ",
+    body: `เอกสาร "${doc.title}" ถูกตีกลับ: ${comment}`,
+    documentId,
+  });
 }
 
 /** Publish an approved document (approver or admin). */
@@ -242,5 +282,12 @@ export async function publish(params: {
     action: "published",
     fromStatus: "approved",
     toStatus: "published",
+  });
+
+  await notifyMany([doc.createdBy, doc.reviewerId, doc.approverId], {
+    type: "published",
+    title: "เอกสารเผยแพร่แล้ว",
+    body: `เอกสาร "${doc.title}" เผยแพร่เรียบร้อยแล้ว`,
+    documentId,
   });
 }

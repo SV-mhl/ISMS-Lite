@@ -2,11 +2,13 @@ import Link from "next/link";
 import { auth, signOut } from "@/auth";
 import AdminBootstrapButton from "@/components/admin-bootstrap-button";
 import { countInboxTasks } from "@/lib/inbox";
+import { countUnread } from "@/lib/notify";
 
 export default async function AppBar() {
   const session = await auth();
   const user = session?.user;
   const inboxCount = user ? await countInboxTasks(user.id) : 0;
+  const unreadCount = user ? await countUnread(user.id) : 0;
 
   return (
     <div className="appbar">
@@ -26,6 +28,18 @@ export default async function AppBar() {
                 display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 4px",
               }}>
                 {inboxCount}
+              </span>
+            )}
+          </Link>
+          <Link href="/notifications" style={{ position: "relative", textDecoration: "none", fontSize: 17 }} title="การแจ้งเตือน">
+            🔔
+            {unreadCount > 0 && (
+              <span style={{
+                position: "absolute", top: -6, right: -12, background: "#e0492b", color: "#fff",
+                fontSize: 10, fontWeight: 700, minWidth: 17, height: 17, borderRadius: 9,
+                display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 4px",
+              }}>
+                {unreadCount}
               </span>
             )}
           </Link>
