@@ -11,6 +11,7 @@ import { exportToPdf } from "@/lib/google/drive";
 import { watermarkPdf } from "@/lib/pdf";
 import { logEvent } from "@/lib/events";
 import { AuthError, type SessionUser } from "@/lib/auth-guard";
+import { canDownload, watermarkMainText } from "@/lib/policy";
 
 export async function buildDocumentPdf(
   documentId: string,
@@ -20,11 +21,9 @@ export async function buildDocumentPdf(
   if (!doc) throw new AuthError("ไม่พบเอกสาร", 404);
   if (!doc.currentVersionId) throw new AuthError("เอกสารยังไม่มีไฟล์", 404);
 
-  const allowed =
-    doc.status === "published" ||
-    user.role === "admin" ||
-    [doc.createdBy, doc.reviewerId, doc.approverId].includes(user.id);
-  if (!allowed) throw new AuthError("คุณไม่มีสิทธิ์ดาวน์โหลดเอกสารนี้", 403);
+  if (!canDownload(doc, user)) {
+    throw new AuthError("คุณไม่มีสิทธิ์ดาวน์โหลดเอกสารนี้", 403);
+  }
 
   const [ver] = await db
     .select()
@@ -34,8 +33,7 @@ export async function buildDocumentPdf(
 
   const raw = await exportToPdf(ver.driveFileId, ver.mimeType ?? "application/pdf");
 
-  const mainText =
-    doc.status === "published" ? "CONTROLLED COPY" : "DRAFT - NOT FOR DISTRIBUTION";
+  const mainText = watermarkMainText(doc.status);
   const stamp = new Date().toISOString().replace("T", " ").slice(0, 19);
   const footer = `ISMS-Lite MAHOLAN  |  ${user.email}  |  ${stamp} UTC  |  status:${doc.status} v${ver.versionNo}`;
 
