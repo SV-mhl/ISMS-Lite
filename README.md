@@ -26,15 +26,18 @@ Landing page = แผนที่ **18 กระบวนการ (Y01–Y20)**
 ## แผนพัฒนา (ทำทีละ Step · ยืนยันก่อนทุก Step)
 
 - [x] **Step 0** — Scaffold + Landing page (18 process) + PWA skeleton
-- [ ] Step 1 — DB schema + seed 18 process
-- [ ] Step 2 — Auth Google OAuth `@maholan.co.th` + RBAC
-- [ ] Step 3 — Google Drive integration (Shared Drive + check-in + versioning + export PDF)
-- [ ] Step 4 — Workflow engine + Task Inbox
-- [ ] Step 5 — Notifications (in-app + Resend email)
+- [x] **Step 1** — DB schema + seed 18 process
+- [x] **Step 2** — Auth Google OAuth `@maholan.co.th` + RBAC
+- [x] **Step 3** — Google Drive integration (OAuth storage + check-in + versioning + export PDF)
+- [x] **Step 4** — Workflow engine + Task Inbox + assignee defaults
+- [ ] Step 5 — Notifications (in-app + Resend email)  ← กำลังทำ
 - [ ] Step 6 — Published PDF-only download
 - [ ] Step 7 — Dashboard + event log timeline
 - [ ] Step 8 — PWA polish + tests + UAT
 - [ ] Step 9 — Deploy (Vercel + OAuth verify)
+
+### ฟีเจอร์เสริม
+- [x] **Landing status indicators** — การ์ดกระบวนการทาเฉดพื้นเมื่อมีไฟล์ + Output เขียวเมื่อมี Published · ดู [docs/LANDING-STATUS-INDICATORS.md](docs/LANDING-STATUS-INDICATORS.md)
 
 ## รันในเครื่อง
 
@@ -50,10 +53,17 @@ npm run lint
 ```
 app/
   layout.tsx            # ฟอนต์ไทย (IBM Plex Sans Thai) + metadata + PWA
-  page.tsx              # Landing map (18 process)
+  page.tsx              # Landing map (18 process) + สถานะเฉด/Output เขียว
   manifest.ts           # PWA manifest (→ /manifest.webmanifest)
-  login/page.tsx        # placeholder (auth จริงใน Step 2)
-  process/[id]/page.tsx # หน้ารายกระบวนการ (workspace เพิ่มใน Step ถัดไป)
+  login/page.tsx        # Google sign-in
+  process/[id]/page.tsx # หน้ากระบวนการ = workspace (เช็คอิน + workflow)
+  api/…                 # auth, processes/documents (check-in), documents (versions+workflow), admin
 lib/
   blueprint.ts          # ข้อมูล 18 process + platform (single source of truth)
+  db/                   # schema (Drizzle) + client + seed + promote-admin
+  documents.ts          # check-in/version/list + getProcessDocFlags() (สถานะ landing)
+  google/               # drive.ts (Drive ops) + tokens.ts (OAuth refresh)
+  events.ts             # append-only event log
+docs/
+  STEP2-GOOGLE-OAUTH-SETUP.md · STEP3-DRIVE-SETUP.md · LANDING-STATUS-INDICATORS.md
 ```
