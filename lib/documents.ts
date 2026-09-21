@@ -130,6 +130,65 @@ export async function listDocuments(processId: string): Promise<DocumentListItem
   return rows.map((r) => ({ ...r, pendingTask: byDoc.get(r.id) ?? null }));
 }
 
+export type VersionRow = {
+  versionNo: number;
+  fileName: string;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  uploadedByName: string | null;
+  uploadedAt: Date;
+  isCurrent: boolean;
+};
+
+export type DocumentDetail = {
+  id: string;
+  title: string;
+  status: string;
+  createdBy: string;
+  reviewerId: string | null;
+  approverId: string | null;
+  processSlug: string;
+  processTitle: string;
+  versions: VersionRow[];
+};
+
+export async function getDocumentDetail(
+  documentId: string,
+): Promise<DocumentDetail | null> {
+  const [d] = await db
+    .select({
+      id: documents.id,
+      title: documents.title,
+      status: documents.status,
+      createdBy: documents.createdBy,
+      reviewerId: documents.reviewerId,
+      approverId: documents.approverId,
+      processSlug: processes.slug,
+      processTitle: processes.title,
+    })
+    .from(documents)
+    .innerJoin(processes, eq(documents.processId, processes.id))
+    .where(eq(documents.id, documentId));
+  if (!d) return null;
+
+  const versions = await db
+    .select({
+      versionNo: documentVersions.versionNo,
+      fileName: documentVersions.driveFileName,
+      mimeType: documentVersions.mimeType,
+      sizeBytes: documentVersions.sizeBytes,
+      uploadedByName: users.name,
+      uploadedAt: documentVersions.uploadedAt,
+      isCurrent: documentVersions.isCurrent,
+    })
+    .from(documentVersions)
+    .leftJoin(users, eq(documentVersions.uploadedBy, users.id))
+    .where(eq(documentVersions.documentId, documentId))
+    .orderBy(desc(documentVersions.versionNo));
+
+  return { ...d, versions };
+}
+
 type FileInput = {
   name: string;
   mimeType: string;

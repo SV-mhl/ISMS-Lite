@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import StatusBadge from "./status-badge";
 
 export type UserOption = { id: string; name: string | null; email: string };
@@ -240,7 +241,9 @@ export default function DocumentWorkspace({
               {documents.map((d) => (
                 <tr key={d.id} style={{ borderTop: "1px solid #eef3fa" }}>
                   <td style={{ padding: "10px" }}>
-                    <div style={{ fontWeight: 600, color: "#12233f" }}>{d.title}</div>
+                    <Link href={`/documents/${d.id}`} style={{ fontWeight: 600, color: "#1a4c9e", textDecoration: "none" }}>
+                      {d.title}
+                    </Link>
                     <div style={{ fontSize: 11, color: "#9db0c8" }}>{d.fileName ?? "—"} · {d.uploadedByName ?? "—"}</div>
                   </td>
                   <td style={{ padding: "10px", color: "#5d7791" }}>v{d.versionNo ?? "—"}</td>
