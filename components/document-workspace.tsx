@@ -251,6 +251,22 @@ export default function DocumentWorkspace({
                   <td style={{ padding: "10px", color: "#5d7791", whiteSpace: "nowrap" }}>{fmtDate(d.updatedAt)}</td>
                   <td style={{ padding: "10px", textAlign: "right", whiteSpace: "nowrap" }}>
                     <div style={{ display: "inline-flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      {d.versionNo != null &&
+                        (d.status === "published" ||
+                          currentUser.role === "admin" ||
+                          d.createdBy === currentUser.id ||
+                          d.reviewerId === currentUser.id ||
+                          d.approverId === currentUser.id) && (
+                          <a
+                            href={`/api/documents/${d.id}/download`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="ดาวน์โหลดเป็น PDF (มีลายน้ำ)"
+                            style={{ ...actionBtnStyle, textDecoration: "none", borderColor: "#0e8577", color: "#0e8577", display: "inline-block" }}
+                          >
+                            ⬇︎ PDF
+                          </a>
+                        )}
                       {actionsFor(d).map((a) => (
                         <button key={a.action} type="button" disabled={busy} onClick={() => openModal(d, a.action)}
                           style={{ ...actionBtnStyle, borderColor: a.color, color: a.color }}>
