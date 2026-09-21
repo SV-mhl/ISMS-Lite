@@ -51,12 +51,15 @@ export default async function ProcessPage({
     title: d.title,
     status: d.status,
     versionNo: d.versionNo,
+    versionLabel: d.versionLabel,
     fileName: d.fileName,
     updatedAt: d.updatedAt.toISOString(),
     uploadedByName: d.uploadedByName,
     createdBy: d.createdBy,
     reviewerId: d.reviewerId,
     approverId: d.approverId,
+    checkedOutBy: d.checkedOutBy,
+    inRevision: d.inRevision,
     pendingTask: d.pendingTask,
   }));
 

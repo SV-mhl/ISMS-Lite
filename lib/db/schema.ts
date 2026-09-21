@@ -89,9 +89,13 @@ export const documents = pgTable(
     title: text("title").notNull(),
     docCode: text("doc_code"),
     status: docStatus("status").notNull().default("draft"),
-    // points to the current document_versions.id (nullable, no hard FK to
-    // avoid a circular constraint; integrity enforced in the app layer)
+    // points to the latest (working) document_versions.id
     currentVersionId: uuid("current_version_id"),
+    // last PUBLISHED version — stays downloadable while a revision is in progress
+    effectiveVersionId: uuid("effective_version_id"),
+    // check-out lock (controlled-document revision)
+    checkedOutBy: uuid("checked_out_by").references(() => users.id, { onDelete: "set null" }),
+    checkedOutAt: timestamp("checked_out_at", { withTimezone: true }),
     createdBy: uuid("created_by")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
@@ -112,7 +116,9 @@ export const documentVersions = pgTable(
     documentId: uuid("document_id")
       .notNull()
       .references(() => documents.id, { onDelete: "cascade" }),
-    versionNo: integer("version_no").notNull(),
+    versionNo: integer("version_no").notNull(), // internal sequential
+    versionMajor: integer("version_major").notNull().default(1), // semantic label major
+    versionMinor: integer("version_minor").notNull().default(0), // semantic label minor (1.0, 1.1, 2.0)
     driveFileId: text("drive_file_id").notNull(),
     driveFileName: text("drive_file_name").notNull(),
     mimeType: text("mime_type"),

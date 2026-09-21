@@ -14,12 +14,15 @@ export type DocRow = {
   title: string;
   status: string;
   versionNo: number | null;
+  versionLabel: string | null;
   fileName: string | null;
   updatedAt: string; // ISO
   uploadedByName: string | null;
   createdBy: string;
   reviewerId: string | null;
   approverId: string | null;
+  checkedOutBy: string | null;
+  inRevision: boolean;
   pendingTask: PendingTask | null;
 };
 
@@ -75,6 +78,11 @@ export default function DocumentWorkspace({
   const versionInputRef = useRef<HTMLInputElement>(null);
   const [versionDocId, setVersionDocId] = useState<string | null>(null);
 
+  // check-in revision modal
+  const [checkinDoc, setCheckinDoc] = useState<DocRow | null>(null);
+  const [checkinFile, setCheckinFile] = useState<File | null>(null);
+  const [bump, setBump] = useState<"minor" | "major">("minor");
+
   // action modal
   const [modal, setModal] = useState<{ doc: DocRow; action: ActionType } | null>(null);
   const [reviewerId, setReviewerId] = useState("");
@@ -127,6 +135,46 @@ export default function DocumentWorkspace({
       setBusy(false);
       setVersionDocId(null);
       if (versionInputRef.current) versionInputRef.current.value = "";
+    }
+  }
+
+  async function simplePost(url: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(url, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "ดำเนินการไม่สำเร็จ");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitCheckin() {
+    if (!checkinDoc || !checkinFile) {
+      setModalErr("กรุณาแนบไฟล์");
+      return;
+    }
+    setBusy(true);
+    setModalErr(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", checkinFile);
+      fd.append("bump", bump);
+      const res = await fetch(`/api/documents/${checkinDoc.id}/checkin`, { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "เช็คอินไม่สำเร็จ");
+      setCheckinDoc(null);
+      setCheckinFile(null);
+      setBump("minor");
+      router.refresh();
+    } catch (err) {
+      setModalErr(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -246,7 +294,17 @@ export default function DocumentWorkspace({
                     </Link>
                     <div style={{ fontSize: 11, color: "#9db0c8" }}>{d.fileName ?? "—"} · {d.uploadedByName ?? "—"}</div>
                   </td>
-                  <td style={{ padding: "10px", color: "#5d7791" }}>v{d.versionNo ?? "—"}</td>
+                  <td style={{ padding: "10px", color: "#5d7791", whiteSpace: "nowrap" }}>
+                    v{d.versionLabel ?? d.versionNo ?? "—"}
+                    {d.inRevision && (
+                      <div style={{ fontSize: 10, color: "#b5730f" }}>กำลังแก้ไข</div>
+                    )}
+                    {d.checkedOutBy && (
+                      <div style={{ fontSize: 10, color: "#b23b3b" }}>
+                        🔒 {userName(users, d.checkedOutBy)}
+                      </div>
+                    )}
+                  </td>
                   <td style={{ padding: "10px" }}><StatusBadge status={d.status} /></td>
                   <td style={{ padding: "10px", fontSize: 11.5, color: "#5d7791" }}>
                     {userName(users, d.reviewerId)} / {userName(users, d.approverId)}
@@ -276,7 +334,33 @@ export default function DocumentWorkspace({
                           {a.label}
                         </button>
                       ))}
-                      {(d.createdBy === currentUser.id || currentUser.role === "admin") && (
+                      {/* check-out published doc for revision */}
+                      {d.status === "published" && !d.checkedOutBy &&
+                        (d.createdBy === currentUser.id || currentUser.role === "admin") && (
+                        <button type="button" disabled={busy}
+                          onClick={() => simplePost(`/api/documents/${d.id}/checkout`)}
+                          style={{ ...actionBtnStyle, borderColor: "#b5730f", color: "#b5730f" }}>
+                          เช็คเอาต์แก้ไข
+                        </button>
+                      )}
+                      {/* holder can check-in a new revision or cancel */}
+                      {d.checkedOutBy === currentUser.id && (
+                        <>
+                          <button type="button" disabled={busy}
+                            onClick={() => { setCheckinDoc(d); setCheckinFile(null); setBump("minor"); setModalErr(null); }}
+                            style={{ ...actionBtnStyle, borderColor: "#178048", color: "#178048" }}>
+                            เช็คอินเวอร์ชันใหม่
+                          </button>
+                          <button type="button" disabled={busy}
+                            onClick={() => simplePost(`/api/documents/${d.id}/cancel-checkout`)}
+                            style={{ ...actionBtnStyle, borderColor: "#cfe0f4", color: "#5d7791" }}>
+                            ยกเลิก
+                          </button>
+                        </>
+                      )}
+                      {/* iterate a non-published draft */}
+                      {d.status !== "published" && !d.checkedOutBy &&
+                        (d.createdBy === currentUser.id || currentUser.role === "admin") && (
                         <button type="button" disabled={busy}
                           onClick={() => { setVersionDocId(d.id); versionInputRef.current?.click(); }}
                           style={{ ...actionBtnStyle, borderColor: "#cfe0f4", color: "#5d7791" }}>
@@ -345,6 +429,50 @@ export default function DocumentWorkspace({
               </button>
               <button type="button" disabled={busy} onClick={confirmAction} className="btn-google" style={{ marginLeft: 0, opacity: busy ? 0.6 : 1 }}>
                 {busy ? "กำลังดำเนินการ…" : "ยืนยัน"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Check-in revision modal */}
+      {checkinDoc && (
+        <div style={overlayStyle} onClick={() => !busy && setCheckinDoc(null)}>
+          <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "#0d356f", marginBottom: 4 }}>
+              เช็คอินเวอร์ชันใหม่
+            </div>
+            <div style={{ fontSize: 12.5, color: "#5d7791", marginBottom: 14 }}>
+              {checkinDoc.title} (ปัจจุบัน v{checkinDoc.versionLabel})
+            </div>
+
+            <label style={labelStyle}>ระดับการเปลี่ยนแปลง</label>
+            <div style={{ display: "flex", gap: 14, fontSize: 13, marginBottom: 4 }}>
+              <label style={{ display: "flex", gap: 6, alignItems: "center", cursor: "pointer" }}>
+                <input type="radio" checked={bump === "minor"} onChange={() => setBump("minor")} />
+                แก้ไขย่อย (minor → x.{"y+1"})
+              </label>
+              <label style={{ display: "flex", gap: 6, alignItems: "center", cursor: "pointer" }}>
+                <input type="radio" checked={bump === "major"} onChange={() => setBump("major")} />
+                แก้ไขใหญ่ (major → รุ่นถัดไป .0)
+              </label>
+            </div>
+
+            <label style={labelStyle}>ไฟล์เวอร์ชันใหม่</label>
+            <input type="file" onChange={(e) => setCheckinFile(e.target.files?.[0] ?? null)} style={{ fontSize: 13 }} />
+
+            <div style={{ fontSize: 11.5, color: "#7189a8", marginTop: 10, lineHeight: 1.6 }}>
+              เวอร์ชันเดิมที่เผยแพร่ยังดาวน์โหลดได้ระหว่างที่รุ่นใหม่ยังไม่ผ่านอนุมัติ · รุ่นใหม่จะเริ่มที่สถานะ “ร่าง” และต้องเดิน workflow ใหม่
+            </div>
+
+            {modalErr && <div style={{ color: "#b23b3b", fontSize: 12.5, marginTop: 10 }}>{modalErr}</div>}
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 18 }}>
+              <button type="button" disabled={busy} onClick={() => setCheckinDoc(null)} style={{ ...actionBtnStyle, borderColor: "#d7e0ec", color: "#5d7791", padding: "9px 16px" }}>
+                ยกเลิก
+              </button>
+              <button type="button" disabled={busy} onClick={submitCheckin} className="btn-google" style={{ marginLeft: 0, opacity: busy ? 0.6 : 1 }}>
+                {busy ? "กำลังเช็คอิน…" : "เช็คอิน"}
               </button>
             </div>
           </div>

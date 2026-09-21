@@ -13,6 +13,7 @@ import {
 } from "@/lib/db/schema";
 import { ensureFolder, getRootId, uploadFile } from "@/lib/google/drive";
 import { logEvent } from "@/lib/events";
+import { WorkflowError } from "@/lib/workflow";
 
 export async function getProcessBySlug(slug: string): Promise<Process | null> {
   const [p] = await db.select().from(processes).where(eq(processes.slug, slug));
@@ -77,6 +78,7 @@ export type DocumentListItem = {
   docCode: string | null;
   status: string;
   versionNo: number | null;
+  versionLabel: string | null; // "1.0", "1.1", "2.0"
   currentVersionId: string | null;
   mimeType: string | null;
   fileName: string | null;
@@ -85,8 +87,14 @@ export type DocumentListItem = {
   createdBy: string;
   reviewerId: string | null;
   approverId: string | null;
+  checkedOutBy: string | null;
+  inRevision: boolean; // has a published effective copy but latest is not published
   pendingTask: PendingTask | null;
 };
+
+export function versionLabel(major: number, minor: number): string {
+  return `${major}.${minor}`;
+}
 
 export async function listDocuments(processId: string): Promise<DocumentListItem[]> {
   const rows = await db
@@ -99,8 +107,12 @@ export async function listDocuments(processId: string): Promise<DocumentListItem
       createdBy: documents.createdBy,
       reviewerId: documents.reviewerId,
       approverId: documents.approverId,
+      checkedOutBy: documents.checkedOutBy,
+      effectiveVersionId: documents.effectiveVersionId,
       currentVersionId: documents.currentVersionId,
       versionNo: documentVersions.versionNo,
+      versionMajor: documentVersions.versionMajor,
+      versionMinor: documentVersions.versionMinor,
       fileName: documentVersions.driveFileName,
       mimeType: documentVersions.mimeType,
       uploadedByName: users.name,
@@ -127,11 +139,20 @@ export async function listDocuments(processId: string): Promise<DocumentListItem
   const byDoc = new Map<string, PendingTask>();
   for (const t of pend) byDoc.set(t.documentId, { type: t.taskType, assigneeId: t.assigneeId });
 
-  return rows.map((r) => ({ ...r, pendingTask: byDoc.get(r.id) ?? null }));
+  return rows.map((r) => ({
+    ...r,
+    versionLabel:
+      r.versionMajor != null && r.versionMinor != null
+        ? versionLabel(r.versionMajor, r.versionMinor)
+        : null,
+    inRevision: r.status !== "published" && r.effectiveVersionId != null,
+    pendingTask: byDoc.get(r.id) ?? null,
+  }));
 }
 
 export type VersionRow = {
   versionNo: number;
+  versionLabel: string;
   fileName: string;
   mimeType: string | null;
   sizeBytes: number | null;
@@ -171,9 +192,11 @@ export async function getDocumentDetail(
     .where(eq(documents.id, documentId));
   if (!d) return null;
 
-  const versions = await db
+  const rawVersions = await db
     .select({
       versionNo: documentVersions.versionNo,
+      versionMajor: documentVersions.versionMajor,
+      versionMinor: documentVersions.versionMinor,
       fileName: documentVersions.driveFileName,
       mimeType: documentVersions.mimeType,
       sizeBytes: documentVersions.sizeBytes,
@@ -185,6 +208,17 @@ export async function getDocumentDetail(
     .leftJoin(users, eq(documentVersions.uploadedBy, users.id))
     .where(eq(documentVersions.documentId, documentId))
     .orderBy(desc(documentVersions.versionNo));
+
+  const versions: VersionRow[] = rawVersions.map((v) => ({
+    versionNo: v.versionNo,
+    versionLabel: versionLabel(v.versionMajor, v.versionMinor),
+    fileName: v.fileName,
+    mimeType: v.mimeType,
+    sizeBytes: v.sizeBytes,
+    uploadedByName: v.uploadedByName,
+    uploadedAt: v.uploadedAt,
+    isCurrent: v.isCurrent,
+  }));
 
   return { ...d, versions };
 }
@@ -253,10 +287,13 @@ export async function addNewVersion(params: {
   const { documentId, file, userId } = params;
 
   const [doc] = await db.select().from(documents).where(eq(documents.id, documentId));
-  if (!doc) throw new Error("ไม่พบเอกสาร");
+  if (!doc) throw new WorkflowError("ไม่พบเอกสาร");
+  if (doc.status === "published") {
+    throw new WorkflowError("เอกสารเผยแพร่แล้ว — ต้อง 'เช็คเอาต์แก้ไข' ก่อนสร้างเวอร์ชันใหม่");
+  }
 
   const [proc] = await db.select().from(processes).where(eq(processes.id, doc.processId));
-  if (!proc) throw new Error("ไม่พบกระบวนการ");
+  if (!proc) throw new WorkflowError("ไม่พบกระบวนการ");
   const folderId = await ensureProcessFolder(proc);
 
   const [last] = await db
@@ -266,6 +303,17 @@ export async function addNewVersion(params: {
     .orderBy(desc(documentVersions.versionNo))
     .limit(1);
   const nextNo = (last?.versionNo ?? 0) + 1;
+
+  // carry the current semantic label (same revision being iterated)
+  let major = 1;
+  let minor = 0;
+  if (doc.currentVersionId) {
+    const [cur] = await db
+      .select({ major: documentVersions.versionMajor, minor: documentVersions.versionMinor })
+      .from(documentVersions)
+      .where(eq(documentVersions.id, doc.currentVersionId));
+    if (cur) { major = cur.major; minor = cur.minor; }
+  }
 
   const uploaded = await uploadFile(folderId, file.name, file.mimeType, file.buffer);
 
@@ -280,6 +328,8 @@ export async function addNewVersion(params: {
     .values({
       documentId,
       versionNo: nextNo,
+      versionMajor: major,
+      versionMinor: minor,
       driveFileId: uploaded.id,
       driveFileName: uploaded.name,
       mimeType: uploaded.mimeType,
@@ -308,4 +358,156 @@ export async function addNewVersion(params: {
   });
 
   return { versionNo: nextNo };
+}
+
+/** Check-out a published document for revision (locks it). */
+export async function checkOut(params: {
+  documentId: string;
+  userId: string;
+  role: "admin" | "member";
+}): Promise<void> {
+  const { documentId, userId, role } = params;
+  const [doc] = await db.select().from(documents).where(eq(documents.id, documentId));
+  if (!doc) throw new WorkflowError("ไม่พบเอกสาร");
+  if (doc.status !== "published") {
+    throw new WorkflowError("เช็คเอาต์ได้เฉพาะเอกสารที่เผยแพร่แล้ว");
+  }
+  if (doc.checkedOutBy) throw new WorkflowError("เอกสารถูกเช็คเอาต์อยู่แล้ว");
+  if (role !== "admin" && doc.createdBy !== userId) {
+    throw new WorkflowError("เฉพาะผู้จัดทำหรือผู้ดูแลระบบเท่านั้นที่เช็คเอาต์ได้");
+  }
+
+  await db
+    .update(documents)
+    .set({ checkedOutBy: userId, checkedOutAt: new Date() })
+    .where(eq(documents.id, documentId));
+
+  await logEvent({
+    entityType: "document",
+    entityId: documentId,
+    documentId,
+    actorId: userId,
+    action: "checked_out",
+  });
+}
+
+/** Release a check-out without creating a new version. */
+export async function cancelCheckOut(params: {
+  documentId: string;
+  userId: string;
+  role: "admin" | "member";
+}): Promise<void> {
+  const { documentId, userId, role } = params;
+  const [doc] = await db.select().from(documents).where(eq(documents.id, documentId));
+  if (!doc) throw new WorkflowError("ไม่พบเอกสาร");
+  if (!doc.checkedOutBy) return;
+  if (role !== "admin" && doc.checkedOutBy !== userId) {
+    throw new WorkflowError("ยกเลิกได้เฉพาะผู้ที่เช็คเอาต์หรือผู้ดูแลระบบ");
+  }
+  await db
+    .update(documents)
+    .set({ checkedOutBy: null, checkedOutAt: null })
+    .where(eq(documents.id, documentId));
+
+  await logEvent({
+    entityType: "document",
+    entityId: documentId,
+    documentId,
+    actorId: userId,
+    action: "checkout_cancelled",
+  });
+}
+
+/** Check-in a revision → new draft version at 1.x (minor) or 2.0 (major).
+ *  The published copy (effectiveVersionId) stays live until the revision is
+ *  itself published. */
+export async function checkInRevision(params: {
+  documentId: string;
+  userId: string;
+  role: "admin" | "member";
+  file: FileInput;
+  bump: "minor" | "major";
+}): Promise<{ versionLabel: string }> {
+  const { documentId, userId, role, file, bump } = params;
+
+  const [doc] = await db.select().from(documents).where(eq(documents.id, documentId));
+  if (!doc) throw new WorkflowError("ไม่พบเอกสาร");
+  if (!doc.checkedOutBy) throw new WorkflowError("ต้องเช็คเอาต์เอกสารก่อน");
+  if (role !== "admin" && doc.checkedOutBy !== userId) {
+    throw new WorkflowError("เฉพาะผู้ที่เช็คเอาต์เท่านั้นที่เช็คอินได้");
+  }
+
+  const [proc] = await db.select().from(processes).where(eq(processes.id, doc.processId));
+  if (!proc) throw new WorkflowError("ไม่พบกระบวนการ");
+  const folderId = await ensureProcessFolder(proc);
+
+  // base label = the effective (published) version's label
+  const baseId = doc.effectiveVersionId ?? doc.currentVersionId;
+  let major = 1;
+  let minor = 0;
+  if (baseId) {
+    const [base] = await db
+      .select({ major: documentVersions.versionMajor, minor: documentVersions.versionMinor })
+      .from(documentVersions)
+      .where(eq(documentVersions.id, baseId));
+    if (base) { major = base.major; minor = base.minor; }
+  }
+  if (bump === "major") { major += 1; minor = 0; } else { minor += 1; }
+
+  const [last] = await db
+    .select({ versionNo: documentVersions.versionNo })
+    .from(documentVersions)
+    .where(eq(documentVersions.documentId, documentId))
+    .orderBy(desc(documentVersions.versionNo))
+    .limit(1);
+  const nextNo = (last?.versionNo ?? 0) + 1;
+
+  const uploaded = await uploadFile(folderId, file.name, file.mimeType, file.buffer);
+
+  await db
+    .update(documentVersions)
+    .set({ isCurrent: false })
+    .where(and(eq(documentVersions.documentId, documentId), eq(documentVersions.isCurrent, true)));
+
+  const [ver] = await db
+    .insert(documentVersions)
+    .values({
+      documentId,
+      versionNo: nextNo,
+      versionMajor: major,
+      versionMinor: minor,
+      driveFileId: uploaded.id,
+      driveFileName: uploaded.name,
+      mimeType: uploaded.mimeType,
+      sizeBytes: uploaded.size,
+      uploadedBy: userId,
+      isCurrent: true,
+    })
+    .returning();
+
+  // enter revision: latest becomes draft; effective (published) copy unchanged
+  await db
+    .update(documents)
+    .set({
+      currentVersionId: ver.id,
+      status: "draft",
+      checkedOutBy: null,
+      checkedOutAt: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(documents.id, documentId));
+
+  const label = versionLabel(major, minor);
+  await logEvent({
+    entityType: "version",
+    entityId: ver.id,
+    documentId,
+    actorId: userId,
+    action: "revision_checked_in",
+    fromStatus: "published",
+    toStatus: "draft",
+    metadata: { versionLabel: label, bump, fileName: uploaded.name, driveFileId: uploaded.id },
+  });
+
+  return { versionLabel: label };
 }

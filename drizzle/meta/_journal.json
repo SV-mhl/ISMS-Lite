@@ -22,6 +22,13 @@
       "when": 1789744603861,
       "tag": "0002_minor_jean_grey",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789984248424,
+      "tag": "0003_confused_absorbing_man",
+      "breakpoints": true
     }
   ]
 }

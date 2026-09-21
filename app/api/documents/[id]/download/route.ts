@@ -4,13 +4,14 @@ import { buildDocumentPdf } from "@/lib/download";
 import { errorResponse } from "@/lib/api-error";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await requireUser();
     const { id } = await params;
-    const { buffer, filename } = await buildDocumentPdf(id, user);
+    const which = req.nextUrl.searchParams.get("v") === "working" ? "working" : "effective";
+    const { buffer, filename } = await buildDocumentPdf(id, user, which);
 
     const encoded = encodeURIComponent(filename);
     return new NextResponse(new Uint8Array(buffer), {

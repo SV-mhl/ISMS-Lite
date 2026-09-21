@@ -74,8 +74,8 @@ export default async function DocumentDetailPage({
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {doc.versions.map((v) => (
                 <div key={v.versionNo} style={{ display: "flex", gap: 8, alignItems: "baseline", fontSize: 12.5 }}>
-                  <span style={{ fontWeight: 700, color: v.isCurrent ? "#178048" : "#7189a8", minWidth: 30 }}>
-                    v{v.versionNo}
+                  <span style={{ fontWeight: 700, color: v.isCurrent ? "#178048" : "#7189a8", minWidth: 34 }}>
+                    v{v.versionLabel}
                   </span>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: "#12233f" }}>{v.fileName}</div>

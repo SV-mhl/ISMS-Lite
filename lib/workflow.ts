@@ -269,9 +269,14 @@ export async function publish(params: {
     throw new WorkflowError("เฉพาะผู้อนุมัติหรือผู้ดูแลระบบเท่านั้นที่เผยแพร่ได้", 403);
   }
 
+  // the just-published version becomes the effective (downloadable) copy
   await db
     .update(documents)
-    .set({ status: "published", updatedAt: new Date() })
+    .set({
+      status: "published",
+      effectiveVersionId: doc.currentVersionId,
+      updatedAt: new Date(),
+    })
     .where(eq(documents.id, documentId));
 
   await logEvent({
