@@ -38,14 +38,21 @@ Landing page = แผนที่ **18 กระบวนการ (Y01–Y20)**
 
 ### ฟีเจอร์เสริม
 - [x] **Landing status indicators** — การ์ดกระบวนการทาเฉดพื้นเมื่อมีไฟล์ + Output เขียวเมื่อมี Published · ดู [docs/LANDING-STATUS-INDICATORS.md](docs/LANDING-STATUS-INDICATORS.md)
+- [x] **Feature A — Version control (check-out/check-in + เวอร์ชัน 1.x/2.x)** · effective copy คู่ขนาน · ดู [docs/FEATURE-A-VERSION-CONTROL.md](docs/FEATURE-A-VERSION-CONTROL.md)
+- [x] **Feature B — ปฏิทินงาน ISO (Action Plan) + แจ้งเตือนล่วงหน้า** (in-app + email, lead_days ปรับได้, cron) · ดู [docs/FEATURE-B-ACTION-CALENDAR.md](docs/FEATURE-B-ACTION-CALENDAR.md)
 
 ## รันในเครื่อง
 
 ```bash
 npm install
-npm run dev      # http://localhost:3000
-npm run build    # production build
+npm run dev              # http://localhost:3000
+npm run build            # production build
 npm run lint
+npm run test             # Vitest unit tests (policy)
+npm run db:migrate       # apply migrations
+npm run db:seed          # seed 18 ISO processes
+npm run db:seed-calendar # seed Action Plan calendar (FY2026)
+npm run promote-admin -- you@maholan.co.th
 ```
 
 ## โครงสร้าง
@@ -56,14 +63,23 @@ app/
   page.tsx              # Landing map (18 process) + สถานะเฉด/Output เขียว
   manifest.ts           # PWA manifest (→ /manifest.webmanifest)
   login/page.tsx        # Google sign-in
-  process/[id]/page.tsx # หน้ากระบวนการ = workspace (เช็คอิน + workflow)
-  api/…                 # auth, processes/documents (check-in), documents (versions+workflow), admin
+  process/[id]/page.tsx # หน้ากระบวนการ = workspace (เช็คอิน + workflow + check-out/in)
+  documents/[id]/       # หน้ารายเอกสาร (เวอร์ชัน + timeline)
+  dashboard/ · calendar/ · notifications/ · inbox/ · login/
+  api/…                 # auth · documents (check-in/versions/workflow/checkout/checkin/download)
+                        #      · processes · calendar · cron/reminders · notifications · admin
 lib/
   blueprint.ts          # ข้อมูล 18 process + platform (single source of truth)
-  db/                   # schema (Drizzle) + client + seed + promote-admin
-  documents.ts          # check-in/version/list + getProcessDocFlags() (สถานะ landing)
+  db/                   # schema (Drizzle) + client + seed + seed-calendar + promote-admin
+  documents.ts          # check-in/version/check-out-in/list + getProcessDocFlags()
+  workflow.ts           # state machine (submit/review/approve/reject/publish)
+  download.ts · pdf.ts  # PDF-only download + watermark
+  calendar.ts · reminders.ts  # Action Plan calendar + advance-reminder engine
+  notify.ts · email.ts  # in-app notifications + Resend email
   google/               # drive.ts (Drive ops) + tokens.ts (OAuth refresh)
-  events.ts             # append-only event log
+  events.ts · policy.ts # append-only event log + pure access/workflow policy (tested)
 docs/
-  STEP2-GOOGLE-OAUTH-SETUP.md · STEP3-DRIVE-SETUP.md · LANDING-STATUS-INDICATORS.md
+  STEP2-GOOGLE-OAUTH-SETUP · STEP3-DRIVE-SETUP · STEP5-EMAIL-SETUP
+  LANDING-STATUS-INDICATORS · FEATURE-A-VERSION-CONTROL · FEATURE-B-ACTION-CALENDAR
+  UAT-CHECKLIST
 ```
