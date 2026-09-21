@@ -213,6 +213,51 @@ export const notifications = pgTable(
   (t) => [index("idx_notifications_user_read").on(t.userId, t.isRead)],
 );
 
+// ---------- ISO Action Plan (calendar + reminders) ----------
+export const cadence = pgEnum("cadence", [
+  "monthly",
+  "quarterly",
+  "biannual",
+  "annual",
+  "once",
+]);
+
+export const actionItems = pgTable("action_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  year: integer("year").notNull(), // plan year (fiscal), e.g. 2026
+  seq: integer("seq").notNull(),
+  title: text("title").notNull(),
+  responsible: text("responsible"), // group name, e.g. "ISMS Team"
+  qpRef: text("qp_ref"), // e.g. "QP-17"
+  category: text("category"), // KPI / Standard Operation / Training
+  cadence: cadence("cadence").notNull(),
+  leadDays: integer("lead_days").notNull().default(7), // advance-reminder days (admin-adjustable)
+  notifyUserId: uuid("notify_user_id").references(() => users.id, { onDelete: "set null" }),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const actionOccurrences = pgTable(
+  "action_occurrences",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => actionItems.id, { onDelete: "cascade" }),
+    dueDate: timestamp("due_date", { withTimezone: true }).notNull(),
+    periodLabel: text("period_label").notNull(),
+    status: text("status").notNull().default("pending"), // pending | done
+    remindedAt: timestamp("reminded_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    completedBy: uuid("completed_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("uq_occurrence").on(t.itemId, t.periodLabel),
+    index("idx_occurrence_due").on(t.dueDate, t.status),
+  ],
+);
+
 // ---------- Inferred types ----------
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -223,3 +268,5 @@ export type WorkflowTask = typeof workflowTasks.$inferSelect;
 export type EventLogEntry = typeof eventLog.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type GoogleAccount = typeof googleAccounts.$inferSelect;
+export type ActionItem = typeof actionItems.$inferSelect;
+export type ActionOccurrence = typeof actionOccurrences.$inferSelect;

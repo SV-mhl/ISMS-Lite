@@ -22,6 +22,9 @@ export default async function AppBar() {
           <Link href="/dashboard" style={{ textDecoration: "none", fontSize: 13, fontWeight: 600, color: "#3f6191" }}>
             📊 แดชบอร์ด
           </Link>
+          <Link href="/calendar" style={{ textDecoration: "none", fontSize: 13, fontWeight: 600, color: "#3f6191" }}>
+            📅 ปฏิทิน ISO
+          </Link>
           <Link href="/inbox" style={{ position: "relative", textDecoration: "none", fontSize: 13, fontWeight: 600, color: "#3f6191" }}>
             📥 งานของฉัน
             {inboxCount > 0 && (

@@ -24,6 +24,7 @@ export type NotifyInput = {
   body?: string;
   documentId?: string | null;
   taskId?: string | null;
+  linkPath?: string; // overrides the default (document/inbox) link
 };
 
 /** Create one in-app notification + send email (best-effort). */
@@ -46,7 +47,9 @@ export async function notify(input: NotifyInput): Promise<void> {
       .where(eq(users.id, input.recipientId));
     if (u?.email) {
       const base = process.env.AUTH_URL ?? "http://localhost:3000";
-      const path = input.documentId ? await linkForDocument(input.documentId) : "/inbox";
+      const path =
+        input.linkPath ??
+        (input.documentId ? await linkForDocument(input.documentId) : "/inbox");
       await sendEmail({
         to: u.email,
         subject: input.title,

@@ -12,6 +12,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx lib/db/seed.ts",
+    "db:seed-calendar": "tsx lib/db/seed-calendar.ts",
     "promote-admin": "tsx lib/db/promote-admin.ts",
     "test": "vitest run"
   },
