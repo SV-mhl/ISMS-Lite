@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AppBar from "@/components/appbar";
+import { getProcessDocFlags } from "@/lib/documents";
 import {
   phases,
   traceChain,
@@ -18,9 +19,20 @@ const listClass: Record<PhaseKey, string> = {
   p1: "l1", p2: "l2", p3: "l3", p4: "l4", plat: "l5",
 };
 
-function Card({ module, phaseKey }: { module: Module; phaseKey: PhaseKey }) {
+function Card({
+  module,
+  phaseKey,
+  hasDocs,
+  hasPublished,
+}: {
+  module: Module;
+  phaseKey: PhaseKey;
+  hasDocs: boolean;
+  hasPublished: boolean;
+}) {
+  const cardCls = `card${hasDocs ? ` filled-${phaseKey}` : ""}`;
   return (
-    <Link href={`/process/${module.id}`} className="card">
+    <Link href={`/process/${module.id}`} className={cardCls}>
       <div className="ch">
         <div className={`num ${numClass[phaseKey]}`}>{module.no}</div>
         <div>
@@ -37,7 +49,7 @@ function Card({ module, phaseKey }: { module: Module; phaseKey: PhaseKey }) {
         ))}
       </ul>
       {module.output && (
-        <div className="out">
+        <div className={`out${hasPublished ? " out-pub" : ""}`}>
           <b>Output:</b> {module.output}
         </div>
       )}
@@ -45,7 +57,9 @@ function Card({ module, phaseKey }: { module: Module; phaseKey: PhaseKey }) {
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  const { withDocs, withPublished } = await getProcessDocFlags();
+
   return (
     <div className="wrap">
       <AppBar />
@@ -80,7 +94,13 @@ export default function Home() {
             </div>
             <div className="cards">
               {phase.modules.map((m) => (
-                <Card key={m.id} module={m} phaseKey={phase.key} />
+                <Card
+                  key={m.id}
+                  module={m}
+                  phaseKey={phase.key}
+                  hasDocs={withDocs.has(m.id)}
+                  hasPublished={withPublished.has(m.id)}
+                />
               ))}
             </div>
           </div>

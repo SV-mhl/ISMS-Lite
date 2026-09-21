@@ -43,6 +43,29 @@ export async function ensureAllProcessFolders(): Promise<number> {
   return created;
 }
 
+/**
+ * Landing-map flags per process slug:
+ * - withDocs: has ≥1 uploaded document (→ shaded card background)
+ * - withPublished: has ≥1 published document (→ green Output line)
+ */
+export async function getProcessDocFlags(): Promise<{
+  withDocs: Set<string>;
+  withPublished: Set<string>;
+}> {
+  const rows = await db
+    .select({ slug: processes.slug, status: documents.status })
+    .from(documents)
+    .innerJoin(processes, eq(documents.processId, processes.id));
+
+  const withDocs = new Set<string>();
+  const withPublished = new Set<string>();
+  for (const r of rows) {
+    withDocs.add(r.slug);
+    if (r.status === "published") withPublished.add(r.slug);
+  }
+  return { withDocs, withPublished };
+}
+
 export type PendingTask = {
   type: "review" | "approve";
   assigneeId: string;

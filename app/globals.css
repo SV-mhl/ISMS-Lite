@@ -137,6 +137,15 @@ a.card:active { transform: translateY(0); }
 .out { margin-top: auto; padding-top: 9px; border-top: 1px dashed #e2eaf5; font-size: 10px; color: #6b83a3; line-height: 1.5; }
 .out b { color: #2f4f7a; font-weight: 600; }
 
+/* Card shaded when process has ≥1 uploaded document (light tint, top→bottom) */
+.card.filled-p1 { background: linear-gradient(180deg, rgba(30, 99, 201, .06), rgba(30, 99, 201, .22)); border-color: rgba(30, 99, 201, .35); }
+.card.filled-p2 { background: linear-gradient(180deg, rgba(44, 78, 166, .06), rgba(44, 78, 166, .22)); border-color: rgba(44, 78, 166, .35); }
+.card.filled-p3 { background: linear-gradient(180deg, rgba(18, 163, 148, .06), rgba(18, 163, 148, .22)); border-color: rgba(18, 163, 148, .35); }
+.card.filled-p4 { background: linear-gradient(180deg, rgba(34, 160, 92, .06), rgba(34, 160, 92, .22)); border-color: rgba(34, 160, 92, .35); }
+
+/* Output line green when process has ≥1 published document */
+.out.out-pub, .out.out-pub b { color: #008080; }
+
 .arrow { text-align: center; color: #9dbbe0; font-size: 18px; margin: 9px 0 0; }
 
 /* ---------- Traceability ---------- */
