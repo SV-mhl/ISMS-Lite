@@ -41,6 +41,7 @@ Landing page = แผนที่ **18 กระบวนการ (Y01–Y20)**
 - [x] **Landing status indicators** — การ์ดกระบวนการทาเฉดพื้นเมื่อมีไฟล์ + Output เขียวเมื่อมี Published · ดู [docs/LANDING-STATUS-INDICATORS.md](docs/LANDING-STATUS-INDICATORS.md)
 - [x] **Feature A — Version control (check-out/check-in + เวอร์ชัน 1.x/2.x)** · effective copy คู่ขนาน · ดู [docs/FEATURE-A-VERSION-CONTROL.md](docs/FEATURE-A-VERSION-CONTROL.md)
 - [x] **Feature B — ปฏิทินงาน ISO (Action Plan) + แจ้งเตือนล่วงหน้า** (in-app + email, lead_days ปรับได้, cron) · ดู [docs/FEATURE-B-ACTION-CALENDAR.md](docs/FEATURE-B-ACTION-CALENDAR.md)
+- [x] **RBAC + ISMS Manager role + ตั้ง default ผู้ตรวจ/อนุมัติ** (`/settings/assignees` ราย/ทุกกระบวนการ) · ดู [docs/FEATURE-RBAC-ISMS-MANAGER.md](docs/FEATURE-RBAC-ISMS-MANAGER.md)
 
 ## รันในเครื่อง
 
