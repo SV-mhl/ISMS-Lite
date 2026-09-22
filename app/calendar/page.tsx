@@ -4,12 +4,18 @@ import AppBar from "@/components/appbar";
 import CalendarBoard, { type ItemSerial } from "@/components/calendar-board";
 import { listCalendar, availableYears } from "@/lib/calendar";
 
-export default async function CalendarPage() {
+export default async function CalendarPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string }>;
+}) {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
   const years = await availableYears();
-  const year = years[0] ?? 2026;
+  const { year: yq } = await searchParams;
+  const qn = Number(yq);
+  const year = yq && years.includes(qn) ? qn : (years[0] ?? 2026);
   const items = await listCalendar(year);
 
   const serial: ItemSerial[] = items.map((i) => ({
@@ -30,7 +36,7 @@ export default async function CalendarPage() {
           กำหนดการปฏิบัติงานตาม KPI/QP รายเดือน–ไตรมาส–ครึ่งปี–รายปี · ระบบแจ้งเตือนล่วงหน้าอัตโนมัติ
           {session.user.role === "admin" && " · ผู้ดูแลปรับจำนวนวันแจ้งล่วงหน้าได้"}
         </p>
-        <CalendarBoard items={serial} isAdmin={session.user.role === "admin"} year={year} />
+        <CalendarBoard items={serial} isAdmin={session.user.role === "admin"} year={year} years={years} />
       </div>
     </div>
   );

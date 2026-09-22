@@ -1,9 +1,10 @@
 // ISO Action Plan calendar: read + admin mutations.
 
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { actionItems, actionOccurrences } from "@/lib/db/schema";
 import { logEvent } from "@/lib/events";
+import { PLAN_ITEMS, buildOccurrences } from "@/lib/action-plan-template";
 
 export type OccurrenceRow = {
   id: string;
@@ -86,4 +87,52 @@ export async function setOccurrenceDone(
     actorId: userId,
     action: done ? "action_completed" : "action_reopened",
   });
+}
+
+/** How many items already exist for a plan year (for dup-import warning). */
+export async function planYearCount(year: number): Promise<number> {
+  const rows = await db.select({ id: actionItems.id }).from(actionItems).where(eq(actionItems.year, year));
+  return rows.length;
+}
+
+/**
+ * Import a plan year from the shared template (stub: reuses the known 31
+ * activities shifted to `year`; real PDF-table parsing is deferred).
+ * Refuses to overwrite an existing year unless `force`.
+ */
+export async function importPlanYear(
+  year: number,
+  opts: { force?: boolean } = {},
+): Promise<{ items: number; occurrences: number; replaced: boolean }> {
+  const existing = await planYearCount(year);
+  if (existing > 0 && !opts.force) {
+    const err = new Error(`ปฏิทินปี ${year} มีอยู่แล้ว (${existing} รายการ)`) as Error & {
+      code?: string; existingCount?: number;
+    };
+    err.code = "PLAN_EXISTS";
+    err.existingCount = existing;
+    throw err;
+  }
+  if (existing > 0) {
+    await db.delete(actionItems).where(eq(actionItems.year, year)); // cascade occurrences
+  }
+
+  let occ = 0;
+  for (const it of PLAN_ITEMS) {
+    const [row] = await db
+      .insert(actionItems)
+      .values({
+        year, seq: it.seq, title: it.title, responsible: it.responsible,
+        qpRef: it.qpRef ?? null, category: it.category, cadence: it.cadence, leadDays: 7,
+      })
+      .returning();
+    const occs = buildOccurrences(it.cadence, year).map((o) => ({
+      itemId: row.id, dueDate: o.dueDate, periodLabel: o.periodLabel,
+    }));
+    if (occs.length) {
+      await db.insert(actionOccurrences).values(occs).onConflictDoNothing();
+      occ += occs.length;
+    }
+  }
+  return { items: PLAN_ITEMS.length, occurrences: occ, replaced: existing > 0 };
 }

@@ -44,10 +44,12 @@ export default function CalendarBoard({
   items,
   isAdmin,
   year,
+  years,
 }: {
   items: ItemSerial[];
   isAdmin: boolean;
   year: number;
+  years: number[];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -95,7 +97,14 @@ export default function CalendarBoard({
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-        <div style={{ fontSize: 12.5, color: "#7189a8" }}>ปีแผนงาน (FY) {year} · {items.length} รายการ</div>
+        <label style={{ fontSize: 12.5, color: "#7189a8", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          ปีงบประมาณ (FY)
+          <select value={year} onChange={(e) => router.push(`/calendar?year=${e.target.value}`)}
+            style={{ padding: "4px 8px", border: "1px solid #d7e0ec", borderRadius: 6, fontSize: 12.5 }}>
+            {years.map((y) => <option key={y} value={y}>{y} (พ.ศ. {y + 543})</option>)}
+          </select>
+        </label>
+        <div style={{ fontSize: 12.5, color: "#7189a8" }}>· {items.length} รายการ</div>
         {isAdmin && (
           <button type="button" onClick={runReminders} disabled={busy} className="btn-google" style={{ marginLeft: 0, fontSize: 12.5 }}>
             {busy ? "กำลังส่ง…" : "▶ ส่งแจ้งเตือนที่ถึงกำหนดตอนนี้"}
