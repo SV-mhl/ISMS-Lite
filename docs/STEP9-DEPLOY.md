@@ -23,16 +23,19 @@ git push -u origin master
 ```
 > สร้าง repo **private** ชื่อ `isms-lite` ใต้บัญชี SV-mhl ก่อน (github.com → New repository → Private → ไม่ต้องใส่ README)
 
-## 2) Neon (Postgres prod)
+## 2) Neon (Postgres prod) — SKELETON เท่านั้น
+> Skeleton = schema + ข้อมูลอ้างอิง (18 processes) เท่านั้น · **ไม่มี** users/documents/versions/
+> tasks/events/notifications/tokens · **ไม่ก๊อปข้อมูลจาก dev** · ปฏิทิน **เว้นว่าง** (admin Import เองภายหลัง)
+
 1. https://neon.tech → New Project (region ใกล้ไทย เช่น Singapore)
 2. คัดลอก **Pooled connection string** (มี `-pooler`) → `DATABASE_URL`
-3. รัน migration + seed จากเครื่อง (ชี้ไป Neon ชั่วคราว):
+3. รัน migration + seed (เฉพาะ 18 processes) จากเครื่อง (ชี้ไป Neon ชั่วคราว):
    ```bash
-   # ใช้ .env แยก หรือ set ชั่วคราว
    DATABASE_URL="<neon-pooled-url>" npm run db:migrate
    DATABASE_URL="<neon-pooled-url>" npm run db:seed
-   DATABASE_URL="<neon-pooled-url>" npm run db:seed-calendar
+   # ไม่ต้องรัน db:seed-calendar — ปล่อยปฏิทินว่าง ให้ admin กด "⬆️ Import ปฏิทิน" ในหน้า /calendar เอง
    ```
+   ตรวจว่าโล่งจริง: `documents`, `users`, `action_items` = 0 แถว · `processes` = 18 · driveFolderId = NULL
 
 ## 3) Vercel
 1. https://vercel.com → Add New → Project → Import จาก GitHub `SV-mhl/isms-lite`
