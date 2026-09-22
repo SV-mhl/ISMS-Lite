@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import AppBar from "@/components/appbar";
 import CalendarBoard, { type ItemSerial } from "@/components/calendar-board";
 import { listCalendar, availableYears } from "@/lib/calendar";
+import { canManage } from "@/lib/policy";
 
 export default async function CalendarPage({
   searchParams,
@@ -34,9 +35,9 @@ export default async function CalendarPage({
         <h1 style={{ fontSize: 18, color: "#0d356f", fontWeight: 700 }}>ปฏิทินงาน ISO (Action Plan)</h1>
         <p style={{ fontSize: 12.5, color: "#7189a8", margin: "3px 0 14px" }}>
           กำหนดการปฏิบัติงานตาม KPI/QP รายเดือน–ไตรมาส–ครึ่งปี–รายปี · ระบบแจ้งเตือนล่วงหน้าอัตโนมัติ
-          {session.user.role === "admin" && " · ผู้ดูแลปรับจำนวนวันแจ้งล่วงหน้าได้"}
+          {canManage(session.user.role) && " · ผู้ดูแล/ISMS Manager ปรับจำนวนวันแจ้งล่วงหน้าได้"}
         </p>
-        <CalendarBoard items={serial} isAdmin={session.user.role === "admin"} year={year} years={years} />
+        <CalendarBoard items={serial} isAdmin={canManage(session.user.role)} year={year} years={years} />
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { requireAdmin } from "@/lib/auth-guard";
+import { requireManager } from "@/lib/auth-guard";
 import { importPlanYear } from "@/lib/calendar";
 import { errorResponse } from "@/lib/api-error";
 
@@ -7,7 +7,7 @@ const MAX_BYTES = 15 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdmin();
+    await requireManager();
     const form = await req.formData();
     const file = form.get("file");
     const year = Number(form.get("year"));

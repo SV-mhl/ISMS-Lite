@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { requireAdmin } from "@/lib/auth-guard";
+import { requireManager } from "@/lib/auth-guard";
 import { getProcessBySlug } from "@/lib/documents";
 import { setProcessDefault } from "@/lib/assignees";
 import { errorResponse } from "@/lib/api-error";
@@ -9,7 +9,7 @@ export async function PUT(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
-    await requireAdmin();
+    await requireManager();
     const { slug } = await params;
     const process = await getProcessBySlug(slug);
     if (!process) {

@@ -101,7 +101,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
     async session({ session, token }) {
       if (token.uid) session.user.id = token.uid as string;
-      if (token.role) session.user.role = token.role as "admin" | "member";
+      if (token.role)
+        session.user.role = token.role as "admin" | "isms_manager" | "member";
       return session;
     },
   },

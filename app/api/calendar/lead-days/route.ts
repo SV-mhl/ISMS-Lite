@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { requireAdmin } from "@/lib/auth-guard";
+import { requireManager } from "@/lib/auth-guard";
 import { updateLeadDays } from "@/lib/calendar";
 import { errorResponse } from "@/lib/api-error";
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdmin();
+    await requireManager();
     const body = await req.json();
     const itemId = String(body.itemId ?? "");
     const leadDays = Number(body.leadDays);

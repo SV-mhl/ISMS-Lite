@@ -10,7 +10,14 @@ export type DocLite = {
   pendingTask?: { type: "review" | "approve"; assigneeId: string } | null;
 };
 
-export type UserLite = { id: string; role: "admin" | "member" };
+export type AppRole = "admin" | "isms_manager" | "member";
+export type UserLite = { id: string; role: AppRole };
+
+/** Can manage process default assignees + the ISO action calendar/reminders.
+ *  (Drive bootstrap, document delete, and role assignment stay admin-only.) */
+export function canManage(role: AppRole): boolean {
+  return role === "admin" || role === "isms_manager";
+}
 
 /** Published docs are downloadable by anyone; otherwise only the people
  *  involved (or admin) may fetch the PDF (to review it). */

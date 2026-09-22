@@ -10,7 +10,8 @@ async function handle(req: NextRequest) {
   let ok = Boolean(secret && authz === `Bearer ${secret}`);
   if (!ok) {
     const session = await auth();
-    ok = session?.user?.role === "admin";
+    const role = session?.user?.role;
+    ok = role === "admin" || role === "isms_manager";
   }
   if (!ok) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 

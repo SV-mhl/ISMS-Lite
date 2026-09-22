@@ -3,6 +3,7 @@ import { auth, signOut } from "@/auth";
 import AdminBootstrapButton from "@/components/admin-bootstrap-button";
 import { countInboxTasks } from "@/lib/inbox";
 import { countUnread } from "@/lib/notify";
+import { canManage } from "@/lib/policy";
 
 export default async function AppBar() {
   const session = await auth();
@@ -25,6 +26,11 @@ export default async function AppBar() {
           <Link href="/calendar" style={{ textDecoration: "none", fontSize: 13, fontWeight: 600, color: "#3f6191" }}>
             📅 ปฏิทิน ISO
           </Link>
+          {canManage(user.role) && (
+            <Link href="/settings/assignees" style={{ textDecoration: "none", fontSize: 13, fontWeight: 600, color: "#3f6191" }}>
+              ⚙ ผู้ตรวจ/อนุมัติ
+            </Link>
+          )}
           <Link href="/inbox" style={{ position: "relative", textDecoration: "none", fontSize: 13, fontWeight: 600, color: "#3f6191" }}>
             📥 งานของฉัน
             {inboxCount > 0 && (

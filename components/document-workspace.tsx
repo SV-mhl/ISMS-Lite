@@ -65,7 +65,7 @@ export default function DocumentWorkspace({
 }: {
   slug: string;
   documents: DocRow[];
-  currentUser: { id: string; role: "admin" | "member" };
+  currentUser: { id: string; role: "admin" | "isms_manager" | "member" };
   users: UserOption[];
   defaults: { reviewerId: string | null; approverId: string | null };
 }) {

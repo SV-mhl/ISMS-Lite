@@ -257,7 +257,7 @@ export async function reject(params: {
 export async function publish(params: {
   documentId: string;
   userId: string;
-  role: "admin" | "member";
+  role: "admin" | "isms_manager" | "member";
 }) {
   const { documentId, userId, role } = params;
   const doc = await getDoc(documentId);

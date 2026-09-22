@@ -4,7 +4,7 @@ export type SessionUser = {
   id: string;
   email: string;
   name?: string | null;
-  role: "admin" | "member";
+  role: "admin" | "isms_manager" | "member";
 };
 
 export class AuthError extends Error {
@@ -32,5 +32,14 @@ export async function requireUser(): Promise<SessionUser> {
 export async function requireAdmin(): Promise<SessionUser> {
   const u = await requireUser();
   if (u.role !== "admin") throw new AuthError("ต้องมีสิทธิ์ผู้ดูแลระบบ", 403);
+  return u;
+}
+
+/** Get the current admin OR ISMS Manager (manage defaults + calendar). */
+export async function requireManager(): Promise<SessionUser> {
+  const u = await requireUser();
+  if (u.role !== "admin" && u.role !== "isms_manager") {
+    throw new AuthError("ต้องมีสิทธิ์ผู้ดูแลระบบหรือ ISMS Manager", 403);
+  }
   return u;
 }

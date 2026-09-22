@@ -1,16 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireManager } from "@/lib/auth-guard";
-import { setOccurrenceDone } from "@/lib/calendar";
+import { setAllProcessDefaults } from "@/lib/assignees";
 import { errorResponse } from "@/lib/api-error";
 
+/** Apply the same default reviewer/approver to ALL processes. */
 export async function POST(req: NextRequest) {
   try {
-    const admin = await requireManager();
+    await requireManager();
     const body = await req.json();
-    const occId = String(body.occId ?? "");
-    const done = Boolean(body.done);
-    if (!occId) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
-    await setOccurrenceDone(occId, admin.id, done);
+    await setAllProcessDefaults(body.reviewerId || null, body.approverId || null);
     return NextResponse.json({ ok: true });
   } catch (err) {
     return errorResponse(err);

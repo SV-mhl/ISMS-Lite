@@ -366,7 +366,7 @@ export async function addNewVersion(params: {
 export async function checkOut(params: {
   documentId: string;
   userId: string;
-  role: "admin" | "member";
+  role: "admin" | "isms_manager" | "member";
 }): Promise<void> {
   const { documentId, userId, role } = params;
   const [doc] = await db.select().from(documents).where(eq(documents.id, documentId));
@@ -397,7 +397,7 @@ export async function checkOut(params: {
 export async function cancelCheckOut(params: {
   documentId: string;
   userId: string;
-  role: "admin" | "member";
+  role: "admin" | "isms_manager" | "member";
 }): Promise<void> {
   const { documentId, userId, role } = params;
   const [doc] = await db.select().from(documents).where(eq(documents.id, documentId));
@@ -426,7 +426,7 @@ export async function cancelCheckOut(params: {
 export async function checkInRevision(params: {
   documentId: string;
   userId: string;
-  role: "admin" | "member";
+  role: "admin" | "isms_manager" | "member";
   file: FileInput;
   bump: "minor" | "major";
 }): Promise<{ versionLabel: string }> {

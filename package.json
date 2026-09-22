@@ -14,6 +14,7 @@
     "db:seed": "tsx lib/db/seed.ts",
     "db:seed-calendar": "tsx lib/db/seed-calendar.ts",
     "promote-admin": "tsx lib/db/promote-admin.ts",
+    "set-role": "tsx lib/db/set-role.ts",
     "test": "vitest run"
   },
   "dependencies": {

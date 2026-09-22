@@ -6,6 +6,7 @@ import DocumentWorkspace from "@/components/document-workspace";
 import ProcessAdminAssignees from "@/components/process-admin-assignees";
 import { moduleById, type PhaseKey } from "@/lib/blueprint";
 import { getProcessBySlug, listDocuments } from "@/lib/documents";
+import { canManage } from "@/lib/policy";
 import { listUsers, getProcessDefaults } from "@/lib/assignees";
 import { isDriveConfigured } from "@/lib/google/drive";
 
@@ -128,7 +129,7 @@ export default async function ProcessPage({
             </div>
           )}
 
-          {currentUser.role === "admin" && (
+          {canManage(currentUser.role) && (
             <ProcessAdminAssignees slug={id} users={users} defaults={defaults} />
           )}
 

@@ -44,7 +44,7 @@ export default function ProcessAdminAssignees({
     <div style={{ marginBottom: 14, maxWidth: 980 }}>
       <button type="button" onClick={() => setOpen((v) => !v)}
         style={{ fontSize: 12.5, color: "#3f6191", fontWeight: 600, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-        ⚙︎ ผู้ตรวจ/ผู้อนุมัติเริ่มต้นของกระบวนการนี้ (แอดมิน) {open ? "▲" : "▼"}
+        ⚙︎ ผู้ตรวจ/ผู้อนุมัติเริ่มต้นของกระบวนการนี้ (แอดมิน/ISMS Manager) {open ? "▲" : "▼"}
       </button>
       {open && (
         <div style={{ background: "#fff", border: "1px solid #dbe6f4", borderRadius: 12, padding: "14px 16px", marginTop: 8, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
