@@ -11,9 +11,11 @@ import {
   users,
   type Process,
 } from "@/lib/db/schema";
-import { ensureFolder, getRootId, uploadFile } from "@/lib/google/drive";
+import { ensureFolder, getRootId, uploadFile, trashFile } from "@/lib/google/drive";
 import { logEvent } from "@/lib/events";
 import { WorkflowError } from "@/lib/workflow";
+import { canDelete } from "@/lib/policy";
+import type { SessionUser } from "@/lib/auth-guard";
 
 export async function getProcessBySlug(slug: string): Promise<Process | null> {
   const [p] = await db.select().from(processes).where(eq(processes.slug, slug));
@@ -510,4 +512,39 @@ export async function checkInRevision(params: {
   });
 
   return { versionLabel: label };
+}
+
+/** Delete a never-published draft document: trash its Drive files (all
+ *  versions) then remove the document (versions/tasks cascade). */
+export async function deleteDraftDocument(
+  documentId: string,
+  user: SessionUser,
+): Promise<void> {
+  const [doc] = await db.select().from(documents).where(eq(documents.id, documentId));
+  if (!doc) throw new WorkflowError("ไม่พบเอกสาร", 404);
+  if (!canDelete(doc, user)) {
+    throw new WorkflowError("ลบได้เฉพาะเอกสารร่างที่ยังไม่เคยเผยแพร่ (โดยผู้จัดทำหรือผู้ดูแล)", 403);
+  }
+
+  const versions = await db
+    .select({ driveFileId: documentVersions.driveFileId })
+    .from(documentVersions)
+    .where(eq(documentVersions.documentId, documentId));
+
+  // move Drive files to trash (best-effort; recoverable)
+  for (const v of versions) {
+    await trashFile(v.driveFileId).catch(() => {});
+  }
+
+  await logEvent({
+    entityType: "document",
+    entityId: documentId,
+    documentId,
+    actorId: user.id,
+    action: "deleted",
+    fromStatus: doc.status,
+    metadata: { title: doc.title, versions: versions.length },
+  });
+
+  await db.delete(documents).where(eq(documents.id, documentId));
 }

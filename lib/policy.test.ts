@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   canDownload,
+  canDelete,
   watermarkMainText,
   availableActions,
   type DocLite,
@@ -34,6 +35,21 @@ describe("canDownload", () => {
     expect(canDownload(doc(), approver)).toBe(true);
     expect(canDownload(doc(), admin)).toBe(true);
     expect(canDownload(doc(), stranger)).toBe(false);
+  });
+});
+
+describe("canDelete", () => {
+  it("author/admin can delete a never-published draft", () => {
+    expect(canDelete(doc({ status: "draft" }), author)).toBe(true);
+    expect(canDelete(doc({ status: "draft" }), admin)).toBe(true);
+    expect(canDelete(doc({ status: "draft" }), stranger)).toBe(false);
+  });
+  it("cannot delete non-draft", () => {
+    expect(canDelete(doc({ status: "review" }), author)).toBe(false);
+    expect(canDelete(doc({ status: "published" }), admin)).toBe(false);
+  });
+  it("cannot delete a draft that was published before (in revision)", () => {
+    expect(canDelete(doc({ status: "draft", effectiveVersionId: "v-1" }), admin)).toBe(false);
   });
 });
 

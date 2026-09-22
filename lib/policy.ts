@@ -6,6 +6,7 @@ export type DocLite = {
   createdBy: string;
   reviewerId: string | null;
   approverId: string | null;
+  effectiveVersionId?: string | null;
   pendingTask?: { type: "review" | "approve"; assigneeId: string } | null;
 };
 
@@ -17,6 +18,15 @@ export function canDownload(doc: DocLite, user: UserLite): boolean {
   if (doc.status === "published") return true;
   if (user.role === "admin") return true;
   return [doc.createdBy, doc.reviewerId, doc.approverId].includes(user.id);
+}
+
+/** A draft that was never published can be deleted by its author or an admin.
+ *  (A draft in revision — one that already has a published effective copy —
+ *  is never deletable, to protect the controlled document.) */
+export function canDelete(doc: DocLite, user: UserLite): boolean {
+  if (doc.status !== "draft") return false;
+  if (doc.effectiveVersionId) return false; // published before → protected
+  return user.role === "admin" || doc.createdBy === user.id;
 }
 
 /** Watermark headline based on publication state. */

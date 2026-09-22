@@ -153,6 +153,22 @@ export default function DocumentWorkspace({
     }
   }
 
+  async function doDelete(d: DocRow) {
+    if (!window.confirm(`ลบเอกสาร "${d.title}" ?\nไฟล์จะถูกย้ายไปถังขยะของ Drive (กู้คืนได้)`)) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/documents/${d.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "ลบไม่สำเร็จ");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function submitCheckin() {
     if (!checkinDoc || !checkinFile) {
       setModalErr("กรุณาแนบไฟล์");
@@ -365,6 +381,15 @@ export default function DocumentWorkspace({
                           onClick={() => { setVersionDocId(d.id); versionInputRef.current?.click(); }}
                           style={{ ...actionBtnStyle, borderColor: "#cfe0f4", color: "#5d7791" }}>
                           อัปเวอร์ชัน
+                        </button>
+                      )}
+                      {/* delete a never-published draft */}
+                      {d.status === "draft" && !d.inRevision &&
+                        (d.createdBy === currentUser.id || currentUser.role === "admin") && (
+                        <button type="button" disabled={busy} onClick={() => doDelete(d)}
+                          title="ลบเอกสารร่าง (ไฟล์ย้ายไปถังขยะ Drive)"
+                          style={{ ...actionBtnStyle, borderColor: "#b23b3b", color: "#b23b3b" }}>
+                          🗑 ลบ
                         </button>
                       )}
                     </div>
