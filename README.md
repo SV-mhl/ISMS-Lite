@@ -16,6 +16,7 @@ Landing page = แผนที่ **18 กระบวนการ (Y01–Y20)**
 |---|---|
 | Stack | Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 · Drizzle + Neon (Step 1) · Auth.js Google (Step 2) · Resend (Step 5) · PWA |
 | Identity | Google OAuth เฉพาะ `@maholan.co.th` (ไม่มีรหัสผ่านแยก) |
+| Roles | `admin` · `isms_manager` · `member` (ดูตารางสิทธิ์ด้านล่าง) |
 | Workflow | Draft → Review → Approved → Published (+ reject loop + version/supersede) |
 | Published | ผู้มีสิทธิ์ดาวน์โหลดเป็น **PDF เท่านั้น** (hybrid backend-mediated + watermark) |
 | แจ้งเตือน | In-app inbox + Email (Resend) |
@@ -53,7 +54,22 @@ npm run db:migrate       # apply migrations
 npm run db:seed          # seed 18 ISO processes
 npm run db:seed-calendar # seed Action Plan calendar (FY2026)
 npm run promote-admin -- you@maholan.co.th
+npm run set-role -- you@maholan.co.th isms_manager   # admin | isms_manager | member
 ```
+
+## บทบาทผู้ใช้ (RBAC)
+
+| ความสามารถ | member | **isms_manager** | admin |
+|---|:---:|:---:|:---:|
+| เช็คอิน / ส่งตรวจ / ตรวจ / อนุมัติ / เผยแพร่ (ตามงานที่ได้รับ) | ✓ | ✓ | ✓ |
+| ดาวน์โหลด PDF (published / งานที่เกี่ยวข้อง) | ✓ | ✓ | ✓ |
+| ตั้ง **ผู้ตรวจ/ผู้อนุมัติเริ่มต้น** (ราย + ทุกกระบวนการ · `/settings/assignees`) | — | ✓ | ✓ |
+| จัดการ **ปฏิทิน ISO**: lead_days · mark done · run reminder · Import | — | ✓ | ✓ |
+| ตั้งค่าโฟลเดอร์ Drive (bootstrap) | — | — | ✓ |
+| ลบเอกสารร่าง | — | — | ✓ |
+| กำหนด role ผู้ใช้ (`set-role`) | — | — | ✓ |
+
+> ผู้ใช้ต้อง **login ครั้งแรก** ก่อน (สร้าง record) แล้วจึง `set-role`/`promote-admin` ได้ · ทุกคนเริ่มเป็น `member`
 
 ## โครงสร้าง
 
