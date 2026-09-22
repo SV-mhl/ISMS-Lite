@@ -25,5 +25,12 @@
 - ตารางงาน + งวดกำหนดการ (สีเขียว=เสร็จ · แดง=เลยกำหนด · ส้ม=ใกล้ถึง ≤14 วัน · ฟ้า=อนาคต)
 - **admin**: ปรับ `lead_days` ต่อรายการ (ต่อปี), กดสลับสถานะเสร็จ/ค้างของแต่ละงวด, ปุ่ม "ส่งแจ้งเตือนตอนนี้"
 
+## Import ปฏิทินจากไฟล์ PDF (สำหรับปีถัดไป)
+- ปุ่ม **⬆️ Import ปฏิทิน** ใน AppBar (แถวเดียวกับ Dashboard, **admin เท่านั้น**) → modal แนบ `.pdf` + เลือกปี (ค.ศ.)
+- **Stub parser:** ระบบตรวจว่าไฟล์เป็น PDF จริง แต่**ยังไม่แกะเนื้อหา byte** — สร้างปฏิทินจาก **template ร่วม** (`lib/action-plan-template.ts`, 31 กิจกรรม) เลื่อนเป็นปีที่เลือก (real PDF-table parsing = deferred)
+- **กันนำเข้าซ้ำ:** ถ้าปีนั้นมีอยู่แล้ว → เตือน (409 `PLAN_EXISTS` + จำนวนเดิม) และต้องกด **"ทับของเดิม"** เพื่อแทนที่
+- `/calendar` มี **year selector** (`?year=`) สลับดูหลายปี · reminder engine ทำงานกับปีใหม่อัตโนมัติ
+- API: `POST /api/calendar/import` (admin, multipart: file + year + force) · logic: `importPlanYear(year, {force})`
+
 ## ปรับสำหรับปีต่อไป
-รันซ้ำ `db:seed-calendar` (เปลี่ยน `YEAR`/`FY_START_YEAR` ในสคริปต์) หรือเพิ่มรายการผ่าน DB · lead_days ปรับได้ที่หน้า `/calendar` โดย admin
+- แนะนำ: ใช้ปุ่ม **Import ปฏิทิน** (ด้านบน) · หรือรันซ้ำ `db:seed-calendar` · lead_days ปรับได้ที่หน้า `/calendar` โดย admin
