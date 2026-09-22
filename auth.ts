@@ -22,6 +22,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   session: { strategy: "jwt" },
+  trustHost: true, // trust the deployment host (Vercel/proxy) for callback URLs
   pages: { signIn: "/login" },
   callbacks: {
     // Gate: อนุญาตเฉพาะอีเมล @maholan.co.th ที่ยืนยันแล้ว
