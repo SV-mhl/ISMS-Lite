@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import ImportCalendarButton from "@/components/import-calendar-button";
 
 export type OccSerial = {
   id: string;
@@ -110,6 +111,7 @@ export default function CalendarBoard({
             {busy ? "กำลังส่ง…" : "▶ ส่งแจ้งเตือนที่ถึงกำหนดตอนนี้"}
           </button>
         )}
+        {isAdmin && <ImportCalendarButton />}
         {msg && <span style={{ fontSize: 12, color: "#178048" }}>{msg}</span>}
       </div>
 

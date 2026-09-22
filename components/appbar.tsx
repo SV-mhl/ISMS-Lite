@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { auth, signOut } from "@/auth";
 import AdminBootstrapButton from "@/components/admin-bootstrap-button";
-import ImportCalendarButton from "@/components/import-calendar-button";
 import { countInboxTasks } from "@/lib/inbox";
 import { countUnread } from "@/lib/notify";
 
@@ -50,7 +49,6 @@ export default async function AppBar() {
               </span>
             )}
           </Link>
-          {user.role === "admin" && <ImportCalendarButton />}
           {user.role === "admin" && <AdminBootstrapButton />}
           <span style={{ fontSize: 13, color: "#2f4f7a", fontWeight: 600 }}>
             {user.name ?? user.email}
