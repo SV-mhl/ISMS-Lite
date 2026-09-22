@@ -497,10 +497,11 @@ const actionBtnStyle: React.CSSProperties = {
 };
 const overlayStyle: React.CSSProperties = {
   position: "fixed", inset: 0, background: "rgba(10,30,60,0.35)", display: "flex",
-  alignItems: "center", justifyContent: "center", padding: 20, zIndex: 50,
+  alignItems: "flex-start", justifyContent: "center", padding: "40px 20px", zIndex: 50, overflowY: "auto",
 };
 const modalStyle: React.CSSProperties = {
   background: "#fff", borderRadius: 14, padding: "22px 24px", width: "100%", maxWidth: 440,
+  maxHeight: "calc(100vh - 80px)", overflowY: "auto", margin: "auto",
   boxShadow: "0 20px 60px rgba(10,30,60,0.3)",
 };
 const labelStyle: React.CSSProperties = {

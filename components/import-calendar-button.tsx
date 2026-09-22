@@ -104,7 +104,7 @@ export default function ImportCalendarButton() {
   );
 }
 
-const overlay: React.CSSProperties = { position: "fixed", inset: 0, background: "rgba(10,30,60,0.35)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 60 };
-const modal: React.CSSProperties = { background: "#fff", borderRadius: 14, padding: "22px 24px", width: "100%", maxWidth: 440, boxShadow: "0 20px 60px rgba(10,30,60,0.3)" };
+const overlay: React.CSSProperties = { position: "fixed", inset: 0, background: "rgba(10,30,60,0.35)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 20px", zIndex: 60, overflowY: "auto" };
+const modal: React.CSSProperties = { background: "#fff", borderRadius: 14, padding: "22px 24px", width: "100%", maxWidth: 440, maxHeight: "calc(100vh - 80px)", overflowY: "auto", boxShadow: "0 20px 60px rgba(10,30,60,0.3)", margin: "auto" };
 const label: React.CSSProperties = { display: "block", fontSize: 12, fontWeight: 600, color: "#3f6191", margin: "8px 0 5px" };
 const btn: React.CSSProperties = { fontSize: 13, fontWeight: 600, border: "1px solid", borderRadius: 8, padding: "9px 16px", cursor: "pointer", background: "#fff" };
