@@ -60,5 +60,16 @@
 - ✅ prod redeploy: `/settings/assignees` + `/api/settings/assignees/bulk` online
 - UAT ด้วยมือ: ดู `docs/UAT-CHECKLIST.md` หมวด **2** (สิทธิ์ 3 roles + 403) และ **2.1** (ตั้ง default ทุก/รายกระบวนการ)
 
+## Assignment Governance (Quick wins — traceability)
+เพิ่มบนหน้า `/settings/assignees` + Dashboard (commit `e65dc74`):
+- **QW1 Audit**: ทุกการเปลี่ยน default ถูกบันทึกลง `event_log` (`assignee_changed` from→to + actor · bulk = `assignee_bulk_set`) · แสดงแผง **"ประวัติการมอบหมาย"** (`listAssignmentEvents`) · migration `0006` ทำ `event_log.entity_id` เป็น nullable (รองรับ event ระดับ bulk)
+- **QW2 Coverage**: แถบสรุป **ผู้ตรวจ/ผู้อนุมัติ X/18** + รายการกระบวนการที่ยังไม่กำหนด + ป้ายเตือนรายแถว (`getAssignmentCoverage`)
+- **QW3 Segregation of Duties**: กัน **ผู้ตรวจ = ผู้อนุมัติ** — ป้าย ⛔ รายแถว, ปิดปุ่มบันทึก, และ server ตอบ **400** ทั้ง single + bulk
+- **Dashboard tiles** (admin/manager): กระบวนการยังไม่มีผู้อนุมัติ · ยังไม่มีผู้ตรวจ · แยกหน้าที่ผิด → คลิกไป `/settings/assignees`
+
+## การทดสอบ (governance) — ดู UAT-CHECKLIST หมวด 2.1
+- ✅ tsc + 12 tests + build · migration 0006 apply dev + Neon · prod redeploy healthy
+
 ## หมายเหตุ (post-MVP)
 - ยังไม่มีหน้า UI จัดการ role ผู้ใช้ (ใช้ `set-role` CLI) — ทำ `/settings/users` ภายหลังได้
+- Traceability graph เต็ม (Scope→Risk→Control→Evidence, Impact analysis) ยัง defer
