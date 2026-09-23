@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import AppBar from "@/components/appbar";
 import SettingsAssignees from "@/components/settings-assignees";
-import { listProcessesWithDefaults, listUsers } from "@/lib/assignees";
+import { listProcessesWithDefaults, listUsers, listAssignmentEvents } from "@/lib/assignees";
 import { canManage } from "@/lib/policy";
 
 export default async function SettingsAssigneesPage() {
@@ -10,7 +10,19 @@ export default async function SettingsAssigneesPage() {
   if (!session?.user) redirect("/login");
   if (!canManage(session.user.role)) redirect("/");
 
-  const [processes, users] = await Promise.all([listProcessesWithDefaults(), listUsers()]);
+  const [processes, users, events] = await Promise.all([
+    listProcessesWithDefaults(),
+    listUsers(),
+    listAssignmentEvents(30),
+  ]);
+  const auditEvents = events.map((e) => ({
+    id: e.id,
+    action: e.action,
+    actorName: e.actorName,
+    processCode: e.processCode,
+    metadata: e.metadata,
+    createdAt: e.createdAt.toISOString(),
+  }));
 
   return (
     <div className="wrap">
@@ -22,7 +34,7 @@ export default async function SettingsAssigneesPage() {
         <p style={{ fontSize: 12.5, color: "#7189a8", margin: "3px 0 16px" }}>
           กำหนดค่าเริ่มต้นให้ทุกกระบวนการทีเดียว หรือรายกระบวนการ · ค่านี้จะเติมอัตโนมัติตอนผู้จัดทำกด “ส่งตรวจ” (ยังแก้รายเอกสารได้)
         </p>
-        <SettingsAssignees processes={processes} users={users} />
+        <SettingsAssignees processes={processes} users={users} auditEvents={auditEvents} />
       </div>
     </div>
   );

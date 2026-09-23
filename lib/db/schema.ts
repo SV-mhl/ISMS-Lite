@@ -166,8 +166,8 @@ export const eventLog = pgTable(
   "event_log",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    entityType: text("entity_type").notNull(), // document | version | task
-    entityId: uuid("entity_id").notNull(),
+    entityType: text("entity_type").notNull(), // document | version | task | process
+    entityId: uuid("entity_id"), // nullable for system/bulk events
     documentId: uuid("document_id"), // for per-document timeline
     actorId: uuid("actor_id").references(() => users.id, { onDelete: "set null" }),
     action: text("action").notNull(), // uploaded | submitted_review | reviewed | approved | rejected | published | superseded | downloaded | ...

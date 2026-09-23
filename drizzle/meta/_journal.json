@@ -43,6 +43,13 @@
       "when": 1790070555973,
       "tag": "0005_icy_azazel",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790155020352,
+      "tag": "0006_parallel_vanisher",
+      "breakpoints": true
     }
   ]
 }

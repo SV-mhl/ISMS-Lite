@@ -4,6 +4,8 @@ import { auth } from "@/auth";
 import AppBar from "@/components/appbar";
 import { getStatusCounts, getProcessProgress } from "@/lib/dashboard";
 import { countInboxTasks } from "@/lib/inbox";
+import { getAssignmentCoverage } from "@/lib/assignees";
+import { canManage } from "@/lib/policy";
 import { STATUS_META } from "@/components/status-badge";
 
 const PHASE_COLOR: Record<string, string> = {
@@ -35,6 +37,9 @@ export default async function DashboardPage() {
   const withDocs = progress.filter((p) => p.total > 0).length;
   const withPublished = progress.filter((p) => p.published > 0).length;
 
+  const isManager = canManage(session.user.role);
+  const cov = isManager ? await getAssignmentCoverage() : null;
+
   return (
     <div className="wrap">
       <AppBar />
@@ -61,6 +66,21 @@ export default async function DashboardPage() {
             <Tile label="งานค้างของฉัน →" value={myPending} color="#e0492b" />
           </Link>
         </div>
+
+        {/* Governance (admin/manager) — assignment coverage */}
+        {cov && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 12, marginTop: 12 }}>
+            <Link href="/settings/assignees" style={{ textDecoration: "none" }}>
+              <Tile label="กระบวนการยังไม่มีผู้อนุมัติ →" value={cov.missingApprover.length} color={cov.missingApprover.length ? "#b5730f" : "#178048"} />
+            </Link>
+            <Link href="/settings/assignees" style={{ textDecoration: "none" }}>
+              <Tile label="กระบวนการยังไม่มีผู้ตรวจ →" value={cov.missingReviewer.length} color={cov.missingReviewer.length ? "#b5730f" : "#178048"} />
+            </Link>
+            <Link href="/settings/assignees" style={{ textDecoration: "none" }}>
+              <Tile label="แยกหน้าที่ผิด (ตรวจ=อนุมัติ) →" value={cov.sodViolations.length} color={cov.sodViolations.length ? "#b23b3b" : "#178048"} />
+            </Link>
+          </div>
+        )}
 
         {/* Process progress */}
         <h2 style={{ fontSize: 15, color: "#0d356f", fontWeight: 700, margin: "22px 0 12px" }}>

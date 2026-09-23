@@ -5,8 +5,8 @@ import { db } from "@/lib/db";
 import { eventLog, users } from "@/lib/db/schema";
 
 export type EventInput = {
-  entityType: "document" | "version" | "task";
-  entityId: string;
+  entityType: "document" | "version" | "task" | "process";
+  entityId?: string | null;
   documentId?: string | null;
   actorId?: string | null;
   action: string;
@@ -18,7 +18,7 @@ export type EventInput = {
 export async function logEvent(e: EventInput): Promise<void> {
   await db.insert(eventLog).values({
     entityType: e.entityType,
-    entityId: e.entityId,
+    entityId: e.entityId ?? null,
     documentId: e.documentId ?? null,
     actorId: e.actorId ?? null,
     action: e.action,
