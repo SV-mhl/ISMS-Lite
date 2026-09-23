@@ -37,6 +37,8 @@ Landing page = แผนที่ **18 กระบวนการ (Y01–Y20)**
 - [ ] Step 8 — PWA polish + tests + UAT
 - [ ] Step 9 — Deploy (Vercel + OAuth verify)
 
+> รายการที่เลื่อนไว้ทำภายหลัง (traceability, Resend, ฯลฯ): [docs/DEFERRED-BACKLOG.md](docs/DEFERRED-BACKLOG.md)
+
 ### ฟีเจอร์เสริม
 - [x] **Landing status indicators** — การ์ดกระบวนการทาเฉดพื้นเมื่อมีไฟล์ + Output เขียวเมื่อมี Published · ดู [docs/LANDING-STATUS-INDICATORS.md](docs/LANDING-STATUS-INDICATORS.md)
 - [x] **Feature A — Version control (check-out/check-in + เวอร์ชัน 1.x/2.x)** · effective copy คู่ขนาน · ดู [docs/FEATURE-A-VERSION-CONTROL.md](docs/FEATURE-A-VERSION-CONTROL.md)
