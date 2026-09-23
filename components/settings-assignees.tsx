@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export type UserOpt = { id: string; name: string | null; email: string };
@@ -36,6 +36,12 @@ export default function SettingsAssignees({
   const [rows, setRows] = useState<Record<string, { r: string; a: string }>>(
     Object.fromEntries(processes.map((p) => [p.id, { r: p.reviewerId ?? "", a: p.approverId ?? "" }])),
   );
+
+  // Re-sync row selections with server data after a save (router.refresh gives
+  // a fresh `processes` reference) so dropdowns/badges reflect what was saved.
+  useEffect(() => {
+    setRows(Object.fromEntries(processes.map((p) => [p.id, { r: p.reviewerId ?? "", a: p.approverId ?? "" }])));
+  }, [processes]);
 
   const uname = (id: string | null | undefined) => {
     if (!id) return "— ไม่กำหนด —";
@@ -121,7 +127,7 @@ export default function SettingsAssignees({
       {/* Bulk */}
       <div style={{ background: "#eef4fc", border: "1px solid #cfe0f4", borderRadius: 12, padding: "16px 18px", marginBottom: 18 }}>
         <div style={{ fontWeight: 700, fontSize: 14, color: "#0d356f", marginBottom: 10 }}>
-          ตั้งค่าเริ่มต้นให้ <u>ทุกกระบวนการ</u> (18) ทีเดียว
+          ตั้งค่าเริ่มต้นให้ <u>ทุกกระบวนการ</u> (18) พร้อมกันทั้งหมด
         </div>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
           <label style={lbl}>ผู้ตรวจเริ่มต้น
