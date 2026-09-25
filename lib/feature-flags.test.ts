@@ -2,8 +2,9 @@ import { describe, it, expect } from "vitest";
 import { isUrlCheckinEnabled } from "./feature-flags";
 
 describe("isUrlCheckinEnabled", () => {
-  it("enabled only for the y08 pilot process", () => {
+  it("enabled for the pilot processes", () => {
     expect(isUrlCheckinEnabled("y08")).toBe(true);
+    expect(isUrlCheckinEnabled("y09")).toBe(true);
   });
   it("disabled for every other process", () => {
     expect(isUrlCheckinEnabled("y01")).toBe(false);
