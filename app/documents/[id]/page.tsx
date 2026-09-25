@@ -53,7 +53,18 @@ export default async function DocumentDetailPage({
               <div style={{ fontSize: 18, fontWeight: 700, color: "#12233f" }}>{doc.title}</div>
               <div style={{ marginTop: 6 }}><StatusBadge status={doc.status} /></div>
             </div>
-            {canDownload && (
+            {canDownload && doc.docKind === "url" && doc.externalUrl && (
+              <a
+                href={doc.externalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-google"
+                style={{ marginLeft: 0, borderColor: "#3f6191", color: "#3f6191" }}
+              >
+                🔗 เปิดลิงก์
+              </a>
+            )}
+            {canDownload && doc.docKind !== "url" && (
               <a
                 href={`/api/documents/${doc.id}/download`}
                 target="_blank"
@@ -78,9 +89,13 @@ export default async function DocumentDetailPage({
                     v{v.versionLabel}
                   </span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ color: "#12233f" }}>{v.fileName}</div>
+                    <div style={{ color: "#12233f" }}>
+                      {v.docKind === "url" ? "🔗 " : ""}
+                      {v.fileName}
+                    </div>
                     <div style={{ fontSize: 11, color: "#9db0c8" }}>
-                      {v.uploadedByName ?? "—"} · {fmt(v.uploadedAt)} · {fmtSize(v.sizeBytes)}
+                      {v.uploadedByName ?? "—"} · {fmt(v.uploadedAt)}
+                      {v.docKind !== "url" && ` · ${fmtSize(v.sizeBytes)}`}
                       {v.isCurrent && " · ปัจจุบัน"}
                     </div>
                   </div>

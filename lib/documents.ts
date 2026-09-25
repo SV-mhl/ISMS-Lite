@@ -82,6 +82,8 @@ export type DocumentListItem = {
   versionNo: number | null;
   versionLabel: string | null; // "1.0", "1.1", "2.0"
   currentVersionId: string | null;
+  docKind: "file" | "url";
+  externalUrl: string | null;
   mimeType: string | null;
   fileName: string | null;
   updatedAt: Date;
@@ -117,6 +119,8 @@ export async function listDocuments(processId: string): Promise<DocumentListItem
       versionMinor: documentVersions.versionMinor,
       fileName: documentVersions.driveFileName,
       mimeType: documentVersions.mimeType,
+      docKind: documentVersions.docKind,
+      externalUrl: documentVersions.externalUrl,
       uploadedByName: users.name,
     })
     .from(documents)
@@ -143,6 +147,7 @@ export async function listDocuments(processId: string): Promise<DocumentListItem
 
   return rows.map((r) => ({
     ...r,
+    docKind: r.docKind ?? "file",
     versionLabel:
       r.versionMajor != null && r.versionMinor != null
         ? versionLabel(r.versionMajor, r.versionMinor)
@@ -161,6 +166,8 @@ export type VersionRow = {
   uploadedByName: string | null;
   uploadedAt: Date;
   isCurrent: boolean;
+  docKind: "file" | "url";
+  externalUrl: string | null;
 };
 
 export type DocumentDetail = {
@@ -172,6 +179,8 @@ export type DocumentDetail = {
   approverId: string | null;
   processSlug: string;
   processTitle: string;
+  docKind: "file" | "url";
+  externalUrl: string | null;
   versions: VersionRow[];
 };
 
@@ -205,6 +214,8 @@ export async function getDocumentDetail(
       uploadedByName: users.name,
       uploadedAt: documentVersions.uploadedAt,
       isCurrent: documentVersions.isCurrent,
+      docKind: documentVersions.docKind,
+      externalUrl: documentVersions.externalUrl,
     })
     .from(documentVersions)
     .leftJoin(users, eq(documentVersions.uploadedBy, users.id))
@@ -220,9 +231,18 @@ export async function getDocumentDetail(
     uploadedByName: v.uploadedByName,
     uploadedAt: v.uploadedAt,
     isCurrent: v.isCurrent,
+    docKind: v.docKind,
+    externalUrl: v.externalUrl,
   }));
 
-  return { ...d, versions };
+  const current = versions.find((v) => v.isCurrent) ?? versions[0];
+
+  return {
+    ...d,
+    docKind: current?.docKind ?? "file",
+    externalUrl: current?.externalUrl ?? null,
+    versions,
+  };
 }
 
 type FileInput = {
@@ -280,6 +300,52 @@ export async function checkInNewDocument(params: {
   return { documentId: doc.id };
 }
 
+/** Check-in a brand new URL-link document (version 1, no Drive file).
+ *  Pilot: gated per-process by isUrlCheckinEnabled(slug) at the API layer. */
+export async function checkInNewUrlDocument(params: {
+  process: Process;
+  title: string;
+  url: string;
+  userId: string;
+}): Promise<{ documentId: string }> {
+  const { process, title, url, userId } = params;
+
+  const [doc] = await db
+    .insert(documents)
+    .values({ processId: process.id, title, status: "draft", createdBy: userId })
+    .returning();
+
+  const [ver] = await db
+    .insert(documentVersions)
+    .values({
+      documentId: doc.id,
+      versionNo: 1,
+      docKind: "url",
+      driveFileName: title,
+      externalUrl: url,
+      uploadedBy: userId,
+      isCurrent: true,
+    })
+    .returning();
+
+  await db
+    .update(documents)
+    .set({ currentVersionId: ver.id, updatedAt: new Date() })
+    .where(eq(documents.id, doc.id));
+
+  await logEvent({
+    entityType: "document",
+    entityId: doc.id,
+    documentId: doc.id,
+    actorId: userId,
+    action: "checked_in",
+    toStatus: "draft",
+    metadata: { versionNo: 1, docKind: "url", url },
+  });
+
+  return { documentId: doc.id };
+}
+
 /** Add a new version to an existing document (re-check-in). */
 export async function addNewVersion(params: {
   documentId: string;
@@ -293,6 +359,7 @@ export async function addNewVersion(params: {
   if (doc.status === "published") {
     throw new WorkflowError("เอกสารเผยแพร่แล้ว — ต้อง 'เช็คเอาต์แก้ไข' ก่อนสร้างเวอร์ชันใหม่");
   }
+  await assertFileKindDocument(documentId);
 
   const [proc] = await db.select().from(processes).where(eq(processes.id, doc.processId));
   if (!proc) throw new WorkflowError("ไม่พบกระบวนการ");
@@ -362,6 +429,19 @@ export async function addNewVersion(params: {
   return { versionNo: nextNo };
 }
 
+/** Pilot guard: URL-kind documents only support fresh check-in (no
+ *  new-version / checkout-revision flows yet) — see feature-flags.ts. */
+async function assertFileKindDocument(documentId: string): Promise<void> {
+  const [cur] = await db
+    .select({ docKind: documentVersions.docKind })
+    .from(documents)
+    .innerJoin(documentVersions, eq(documents.currentVersionId, documentVersions.id))
+    .where(eq(documents.id, documentId));
+  if (cur?.docKind === "url") {
+    throw new WorkflowError("เอกสารประเภทลิงก์ URL ยังไม่รองรับการอัปเวอร์ชัน/เช็คเอาต์แก้ไขในระยะนำร่องนี้");
+  }
+}
+
 /** Check-out a published document for revision (locks it). */
 export async function checkOut(params: {
   documentId: string;
@@ -375,6 +455,7 @@ export async function checkOut(params: {
     throw new WorkflowError("เช็คเอาต์ได้เฉพาะเอกสารที่เผยแพร่แล้ว");
   }
   if (doc.checkedOutBy) throw new WorkflowError("เอกสารถูกเช็คเอาต์อยู่แล้ว");
+  await assertFileKindDocument(documentId);
   if (role !== "admin" && doc.createdBy !== userId) {
     throw new WorkflowError("เฉพาะผู้จัดทำหรือผู้ดูแลระบบเท่านั้นที่เช็คเอาต์ได้");
   }
@@ -531,9 +612,10 @@ export async function deleteDraftDocument(
     .from(documentVersions)
     .where(eq(documentVersions.documentId, documentId));
 
-  // move Drive files to trash (best-effort; recoverable)
+  // move Drive files to trash (best-effort; recoverable) — url-kind versions
+  // have no Drive file, so driveFileId is null and skipped
   for (const v of versions) {
-    await trashFile(v.driveFileId).catch(() => {});
+    if (v.driveFileId) await trashFile(v.driveFileId).catch(() => {});
   }
 
   await logEvent({

@@ -9,6 +9,7 @@ import { getProcessBySlug, listDocuments } from "@/lib/documents";
 import { canManage } from "@/lib/policy";
 import { listUsers, getProcessDefaults } from "@/lib/assignees";
 import { isDriveConfigured } from "@/lib/google/drive";
+import { isUrlCheckinEnabled } from "@/lib/feature-flags";
 
 const numClass: Record<PhaseKey, string> = {
   p1: "n1", p2: "n2", p3: "n3", p4: "n4", plat: "n5",
@@ -54,6 +55,8 @@ export default async function ProcessPage({
     versionNo: d.versionNo,
     versionLabel: d.versionLabel,
     fileName: d.fileName,
+    docKind: d.docKind,
+    externalUrl: d.externalUrl,
     updatedAt: d.updatedAt.toISOString(),
     uploadedByName: d.uploadedByName,
     createdBy: d.createdBy,
@@ -139,6 +142,7 @@ export default async function ProcessPage({
             currentUser={currentUser}
             users={users}
             defaults={defaults}
+            urlCheckinEnabled={isUrlCheckinEnabled(id)}
           />
         </div>
       </div>

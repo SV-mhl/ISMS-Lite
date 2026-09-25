@@ -40,6 +40,9 @@ export async function buildDocumentPdf(
     .from(documentVersions)
     .where(eq(documentVersions.id, versionId));
   if (!ver) throw new AuthError("ไม่พบเวอร์ชันเอกสาร", 404);
+  if (ver.docKind === "url" || !ver.driveFileId) {
+    throw new AuthError("เอกสารนี้เป็นลิงก์ URL — เปิดลิงก์แทนการดาวน์โหลด PDF", 400);
+  }
 
   const raw = await exportToPdf(ver.driveFileId, ver.mimeType ?? "application/pdf");
 

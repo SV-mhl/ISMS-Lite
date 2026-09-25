@@ -31,6 +31,8 @@ export const docStatus = pgEnum("doc_status", [
   "superseded",
 ]);
 
+export const docKind = pgEnum("doc_kind", ["file", "url"]);
+
 export const flowRole = pgEnum("flow_role", ["reviewer", "approver"]);
 export const taskType = pgEnum("task_type", ["review", "approve"]);
 export const taskStatus = pgEnum("task_status", ["pending", "done", "rejected"]);
@@ -119,8 +121,11 @@ export const documentVersions = pgTable(
     versionNo: integer("version_no").notNull(), // internal sequential
     versionMajor: integer("version_major").notNull().default(1), // semantic label major
     versionMinor: integer("version_minor").notNull().default(0), // semantic label minor (1.0, 1.1, 2.0)
-    driveFileId: text("drive_file_id").notNull(),
+    // "url" versions have no Drive file: driveFileId is null, externalUrl holds the link
+    docKind: docKind("doc_kind").notNull().default("file"),
+    driveFileId: text("drive_file_id"),
     driveFileName: text("drive_file_name").notNull(),
+    externalUrl: text("external_url"),
     mimeType: text("mime_type"),
     sizeBytes: bigint("size_bytes", { mode: "number" }),
     uploadedBy: uuid("uploaded_by")

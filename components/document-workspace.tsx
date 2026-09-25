@@ -16,6 +16,8 @@ export type DocRow = {
   versionNo: number | null;
   versionLabel: string | null;
   fileName: string | null;
+  docKind: "file" | "url";
+  externalUrl: string | null;
   updatedAt: string; // ISO
   uploadedByName: string | null;
   createdBy: string;
@@ -62,16 +64,20 @@ export default function DocumentWorkspace({
   currentUser,
   users,
   defaults,
+  urlCheckinEnabled = false,
 }: {
   slug: string;
   documents: DocRow[];
   currentUser: { id: string; role: "admin" | "isms_manager" | "member" };
   users: UserOption[];
   defaults: { reviewerId: string | null; approverId: string | null };
+  urlCheckinEnabled?: boolean;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [docType, setDocType] = useState<"file" | "url">("file");
+  const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,20 +99,37 @@ export default function DocumentWorkspace({
   async function submitNew(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!title.trim() || !file) {
+
+    if (!title.trim()) {
+      setError("กรุณาระบุชื่อเอกสาร");
+      return;
+    }
+    if (docType === "url") {
+      if (!url.trim()) {
+        setError("กรุณาระบุ URL");
+        return;
+      }
+    } else if (!file) {
       setError("กรุณาระบุชื่อเอกสารและแนบไฟล์");
       return;
     }
+
     setBusy(true);
     try {
       const fd = new FormData();
       fd.append("title", title.trim());
-      fd.append("file", file);
+      fd.append("docType", docType);
+      if (docType === "url") {
+        fd.append("url", url.trim());
+      } else {
+        fd.append("file", file as File);
+      }
       const res = await fetch(`/api/processes/${slug}/documents`, { method: "POST", body: fd });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "อัปโหลดไม่สำเร็จ");
+      if (!res.ok) throw new Error(data.error ?? "เช็คอินไม่สำเร็จ");
       setTitle("");
       setFile(null);
+      setUrl("");
       const el = document.getElementById("new-doc-file") as HTMLInputElement | null;
       if (el) el.value = "";
       router.refresh();
@@ -269,6 +292,20 @@ export default function DocumentWorkspace({
         <div style={{ fontWeight: 700, fontSize: 14, color: "#0d356f", width: "100%" }}>
           เช็คอินเอกสารใหม่
         </div>
+
+        {urlCheckinEnabled && (
+          <div style={{ display: "flex", gap: 14, fontSize: 12.5, width: "100%" }}>
+            <label style={{ display: "flex", gap: 6, alignItems: "center", cursor: "pointer" }}>
+              <input type="radio" checked={docType === "file"} onChange={() => setDocType("file")} />
+              📄 ไฟล์
+            </label>
+            <label style={{ display: "flex", gap: 6, alignItems: "center", cursor: "pointer" }}>
+              <input type="radio" checked={docType === "url"} onChange={() => setDocType("url")} />
+              🔗 ลิงก์ URL
+            </label>
+          </div>
+        )}
+
         <input
           type="text"
           placeholder="ชื่อเอกสาร เช่น นโยบายความมั่นคงปลอดภัยสารสนเทศ"
@@ -276,9 +313,19 @@ export default function DocumentWorkspace({
           onChange={(e) => setTitle(e.target.value)}
           style={{ flex: "1 1 260px", padding: "9px 12px", border: "1px solid #d7e0ec", borderRadius: 8, fontSize: 13.5 }}
         />
-        <input id="new-doc-file" type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} style={{ fontSize: 13, flex: "1 1 200px" }} />
+        {docType === "url" ? (
+          <input
+            type="url"
+            placeholder="https://…"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            style={{ flex: "1 1 260px", padding: "9px 12px", border: "1px solid #d7e0ec", borderRadius: 8, fontSize: 13.5 }}
+          />
+        ) : (
+          <input id="new-doc-file" type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} style={{ fontSize: 13, flex: "1 1 200px" }} />
+        )}
         <button type="submit" disabled={busy} className="btn-google" style={{ marginLeft: 0, opacity: busy ? 0.6 : 1 }}>
-          {busy ? "กำลังอัปโหลด…" : "⬆️ เช็คอิน"}
+          {busy ? "กำลังเช็คอิน…" : "⬆️ เช็คอิน"}
         </button>
         {error && <div style={{ width: "100%", color: "#b23b3b", fontSize: 12.5 }}>{error}</div>}
       </form>
@@ -308,7 +355,9 @@ export default function DocumentWorkspace({
                     <Link href={`/documents/${d.id}`} style={{ fontWeight: 600, color: "#1a4c9e", textDecoration: "none" }}>
                       {d.title}
                     </Link>
-                    <div style={{ fontSize: 11, color: "#9db0c8" }}>{d.fileName ?? "—"} · {d.uploadedByName ?? "—"}</div>
+                    <div style={{ fontSize: 11, color: "#9db0c8" }}>
+                      {d.docKind === "url" ? "🔗 ลิงก์" : (d.fileName ?? "—")} · {d.uploadedByName ?? "—"}
+                    </div>
                   </td>
                   <td style={{ padding: "10px", color: "#5d7791", whiteSpace: "nowrap" }}>
                     v{d.versionLabel ?? d.versionNo ?? "—"}
@@ -333,7 +382,20 @@ export default function DocumentWorkspace({
                           currentUser.role === "admin" ||
                           d.createdBy === currentUser.id ||
                           d.reviewerId === currentUser.id ||
-                          d.approverId === currentUser.id) && (
+                          d.approverId === currentUser.id) &&
+                        (d.docKind === "url" ? (
+                          d.externalUrl && (
+                            <a
+                              href={d.externalUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="เปิดลิงก์เอกสาร"
+                              style={{ ...actionBtnStyle, textDecoration: "none", borderColor: "#3f6191", color: "#3f6191", display: "inline-block" }}
+                            >
+                              🔗 เปิดลิงก์
+                            </a>
+                          )
+                        ) : (
                           <a
                             href={`/api/documents/${d.id}/download`}
                             target="_blank"
@@ -343,15 +405,15 @@ export default function DocumentWorkspace({
                           >
                             ⬇︎ PDF
                           </a>
-                        )}
+                        ))}
                       {actionsFor(d).map((a) => (
                         <button key={a.action} type="button" disabled={busy} onClick={() => openModal(d, a.action)}
                           style={{ ...actionBtnStyle, borderColor: a.color, color: a.color }}>
                           {a.label}
                         </button>
                       ))}
-                      {/* check-out published doc for revision */}
-                      {d.status === "published" && !d.checkedOutBy &&
+                      {/* check-out published doc for revision (file docs only — pilot scope) */}
+                      {d.docKind !== "url" && d.status === "published" && !d.checkedOutBy &&
                         (d.createdBy === currentUser.id || currentUser.role === "admin") && (
                         <button type="button" disabled={busy}
                           onClick={() => simplePost(`/api/documents/${d.id}/checkout`)}
@@ -374,8 +436,8 @@ export default function DocumentWorkspace({
                           </button>
                         </>
                       )}
-                      {/* iterate a non-published draft */}
-                      {d.status !== "published" && !d.checkedOutBy &&
+                      {/* iterate a non-published draft (file docs only — pilot scope) */}
+                      {d.docKind !== "url" && d.status !== "published" && !d.checkedOutBy &&
                         (d.createdBy === currentUser.id || currentUser.role === "admin") && (
                         <button type="button" disabled={busy}
                           onClick={() => { setVersionDocId(d.id); versionInputRef.current?.click(); }}
