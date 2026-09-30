@@ -41,7 +41,6 @@ function Card({
           </div>
           <div className="cs">{module.subtitle}</div>
         </div>
-        <div className="code">{module.code}</div>
       </div>
       <ul className={listClass[phaseKey]}>
         {module.bullets.map((b) => (
@@ -53,6 +52,7 @@ function Card({
           <b>Output:</b> {module.output}
         </div>
       )}
+      <div className="code">{module.code}</div>
     </Link>
   );
 }

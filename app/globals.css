@@ -114,6 +114,7 @@ body {
 
 /* ---------- Card ---------- */
 .card {
+  position: relative;
   background: #fff; border: 1px solid var(--card-border); border-radius: 12px;
   padding: 14px 15px 13px; box-shadow: 0 3px 10px rgba(20, 50, 100, .055);
   display: flex; flex-direction: column; text-decoration: none; color: inherit;
@@ -121,12 +122,12 @@ body {
 }
 a.card:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(20, 50, 100, .13); border-color: #b9d1ee; }
 a.card:active { transform: translateY(0); }
-.ch { display: flex; align-items: flex-start; gap: 10px; border-bottom: 1px solid #eef3fa; padding-bottom: 10px; margin-bottom: 10px; }
+.ch { display: flex; align-items: flex-start; gap: 10px; border-bottom: 1px solid #eef3fa; padding-bottom: 10px; margin-bottom: 10px; min-height: 62px; }
 .num { width: 25px; height: 25px; border-radius: 8px; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none; }
 .n1 { background: var(--p1a); } .n2 { background: var(--p2a); } .n3 { background: var(--p3a); } .n4 { background: var(--p4a); } .n5 { background: var(--plat); }
 .ct { font-size: 13.6px; font-weight: 700; line-height: 1.35; color: var(--ink); }
 .cs { font-size: 9.5px; font-weight: 700; letter-spacing: 1px; color: #7189a8; margin-top: 3px; }
-.code { margin-left: auto; font-size: 9.5px; font-weight: 700; background: #eef4fc; border: 1px solid #d7e4f5; color: #3f6191; padding: 3px 7px; border-radius: 6px; flex: none; }
+.code { position: absolute; right: 15px; bottom: 13px; font-size: 6.83px; font-weight: 700; background: #eef4fc; border: 1px solid #d7e4f5; color: #3f6191; padding: 3px 7px; border-radius: 6px; }
 
 .card ul { list-style: none; margin: 0; padding: 0; }
 .card li { font-size: 11.2px; line-height: 1.62; color: #3c536f; padding-left: 13px; position: relative; margin-bottom: 3px; }
@@ -134,7 +135,7 @@ a.card:active { transform: translateY(0); }
 .l1 li:before { background: var(--p1a); } .l2 li:before { background: var(--p2a); }
 .l3 li:before { background: var(--p3a); } .l4 li:before { background: var(--p4a); } .l5 li:before { background: #8fa2bd; }
 .star { color: #e08a1e; font-weight: 700; }
-.out { margin-top: auto; padding-top: 9px; border-top: 1px dashed #e2eaf5; font-size: 10px; color: #6b83a3; line-height: 1.5; }
+.out { margin-top: auto; padding-top: 9px; padding-right: 42px; border-top: 1px dashed #e2eaf5; font-size: 10px; color: #6b83a3; line-height: 1.5; }
 .out b { color: #2f4f7a; font-weight: 600; }
 
 /* Card shaded when process has ≥1 uploaded document (light tint, top→bottom) */

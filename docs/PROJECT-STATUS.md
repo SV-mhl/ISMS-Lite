@@ -20,6 +20,8 @@ Auth.js v5 (Google, `trustHost`) · googleapis (Drive) · pdf-lib (ลายน�
 - แจ้งเตือน in-app 🔔 + email (Resend — โค้ดพร้อม ยังไม่เปิด)
 - **ปฏิทิน ISO** (Action Plan) + reminder ล่วงหน้า (Vercel Cron รายวัน) + **Import PDF** (stub) + year selector
 - Dashboard + Timeline (event_log) · landing เฉดการ์ด/Output เขียวตามสถานะ
+- Landing map: bullet เนื้อหา Y01-Y17 ตัด ≤5 บรรทัด/กล่อง + แปลไทยทางการ · ป้าย Y0x ย้ายไปมุมขวาล่าง +
+  เส้นแบ่ง header จัดตรงกันทุกกล่อง (ดู `LANDING-CARD-LAYOUT.md`)
 - **`/settings/assignees`** (admin/manager): ตั้งผู้ตรวจ/อนุมัติเริ่มต้น ราย/ทุกกระบวนการ +
   **governance**: audit log · coverage (X/18) · segregation of duties · Dashboard tiles
 - คุณภาพ: **12 unit tests** (`npm run test`) · tsc + build สะอาด
@@ -50,4 +52,5 @@ Auth.js v5 (Google, `trustHost`) · googleapis (Drive) · pdf-lib (ลายน�
 ## เอกสารอ้างอิง
 `README.md` · `docs/STEP2-GOOGLE-OAUTH-SETUP` · `STEP3-DRIVE-SETUP` · `STEP5-EMAIL-SETUP` ·
 `STEP9-DEPLOY` · `FEATURE-A-VERSION-CONTROL` · `FEATURE-B-ACTION-CALENDAR` ·
-`FEATURE-RBAC-ISMS-MANAGER` · `LANDING-STATUS-INDICATORS` · `UAT-CHECKLIST` · `DEFERRED-BACKLOG`
+`FEATURE-RBAC-ISMS-MANAGER` · `LANDING-STATUS-INDICATORS` · `LANDING-CARD-LAYOUT` ·
+`UAT-CHECKLIST` · `DEFERRED-BACKLOG`
