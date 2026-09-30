@@ -69,7 +69,7 @@ export default async function Home() {
         <div className="shield">🛡️</div>
         <div>
           <div className="kick">ISO/IEC 27001:2022 · YEAR-ONE JOURNEY · MVP 1.0</div>
-          <h1>ศูนย์จัดการเอกสารและกระบวนการ ISMS — เตรียมพร้อมสู่การรับรอง</h1>
+          <h1>Portal เอกสารและกระบวนการ ISMS — เตรียมพร้อมเพื่อการตรวจรับรอง</h1>
           <div className="sub">
             เส้นทางการจัดทำ ดำเนินการ ตรวจประเมิน และเตรียมความพร้อมสู่การรับรอง ISMS
             ทั้งระบบ · ขับเคลื่อนด้วย Traceability · Evidence · Gate Explainability
