@@ -46,27 +46,39 @@ export async function ensureAllProcessFolders(): Promise<number> {
   return created;
 }
 
+/** First 8 characters of a document title, with "…" appended if longer. */
+export function truncateDocTitle(title: string): string {
+  return title.length > 8 ? `${title.slice(0, 8)}…` : title;
+}
+
 /**
  * Landing-map flags per process slug:
  * - withDocs: has ≥1 uploaded document (→ shaded card background)
- * - withPublished: has ≥1 published document (→ green Output line)
+ * - approvedTitles: titles (truncated) of documents that reached at least
+ *   "approved" (approved or published) → shown on the Output line instead
+ *   of the static blueprint text, in dark green (#008080)
  */
 export async function getProcessDocFlags(): Promise<{
   withDocs: Set<string>;
-  withPublished: Set<string>;
+  approvedTitles: Map<string, string[]>;
 }> {
   const rows = await db
-    .select({ slug: processes.slug, status: documents.status })
+    .select({ slug: processes.slug, status: documents.status, title: documents.title })
     .from(documents)
-    .innerJoin(processes, eq(documents.processId, processes.id));
+    .innerJoin(processes, eq(documents.processId, processes.id))
+    .orderBy(documents.title);
 
   const withDocs = new Set<string>();
-  const withPublished = new Set<string>();
+  const approvedTitles = new Map<string, string[]>();
   for (const r of rows) {
     withDocs.add(r.slug);
-    if (r.status === "published") withPublished.add(r.slug);
+    if (r.status === "approved" || r.status === "published") {
+      const list = approvedTitles.get(r.slug) ?? [];
+      list.push(truncateDocTitle(r.title));
+      approvedTitles.set(r.slug, list);
+    }
   }
-  return { withDocs, withPublished };
+  return { withDocs, approvedTitles };
 }
 
 export type PendingTask = {

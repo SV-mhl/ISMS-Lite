@@ -23,14 +23,15 @@ function Card({
   module,
   phaseKey,
   hasDocs,
-  hasPublished,
+  approvedTitles,
 }: {
   module: Module;
   phaseKey: PhaseKey;
   hasDocs: boolean;
-  hasPublished: boolean;
+  approvedTitles: string[];
 }) {
   const cardCls = `card${hasDocs ? ` filled-${phaseKey}` : ""}`;
+  const hasApproved = approvedTitles.length > 0;
   return (
     <Link href={`/process/${module.id}`} className={cardCls}>
       <div className="ch">
@@ -47,9 +48,9 @@ function Card({
           <li key={b}>{b}</li>
         ))}
       </ul>
-      {module.output && (
-        <div className={`out${hasPublished ? " out-pub" : ""}`}>
-          <b>Output:</b> {module.output}
+      {(module.output || hasApproved) && (
+        <div className={`out${hasApproved ? " out-pub" : ""}`}>
+          <b>Output:</b> {hasApproved ? approvedTitles.join(", ") : module.output}
         </div>
       )}
       <div className="code">{module.code}</div>
@@ -58,7 +59,7 @@ function Card({
 }
 
 export default async function Home() {
-  const { withDocs, withPublished } = await getProcessDocFlags();
+  const { withDocs, approvedTitles } = await getProcessDocFlags();
 
   return (
     <div className="wrap">
@@ -99,7 +100,7 @@ export default async function Home() {
                   module={m}
                   phaseKey={phase.key}
                   hasDocs={withDocs.has(m.id)}
-                  hasPublished={withPublished.has(m.id)}
+                  approvedTitles={approvedTitles.get(m.id) ?? []}
                 />
               ))}
             </div>

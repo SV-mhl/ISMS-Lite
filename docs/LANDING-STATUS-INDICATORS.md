@@ -1,21 +1,22 @@
 # Landing Map — ตัวบ่งชี้สถานะบนการ์ดกระบวนการ
 
 เอกสารบันทึก scope ของฟีเจอร์ "การ์ด 18 กระบวนการบนหน้า landing สะท้อนสถานะจริงจากฐานข้อมูล"
-(เพิ่มหลัง Step 4 · commit `feat(landing): shade process cards…`)
+(เพิ่มหลัง Step 4 · commit `feat(landing): shade process cards…` · ข้อ 2 ปรับใหญ่ 2026-10-09)
 
 ## วัตถุประสงค์
 ให้ผู้ใช้เห็นภาพรวมได้ทันทีจากหน้าแรกว่ากระบวนการไหน "มีเอกสารแล้ว" และกระบวนการไหน
 "มีเอกสารเผยแพร่แล้ว" โดยไม่ต้องคลิกเข้าไปดูทีละกระบวนการ
 
-## กติกา 2 ข้อ (ยืนยันโดยผู้ใช้)
+## กติกา (ยืนยันโดยผู้ใช้)
 
 | เอฟเฟกต์ | เงื่อนไข (trigger) | รายละเอียด |
 |---|---|---|
 | **1. เฉดพื้นการ์ด** | process มีเอกสารอัปโหลดแล้ว **≥ 1 ไฟล์** (ทุกสถานะ) | ไล่เฉดแนวตั้ง **อ่อนด้านบน → เข้มขึ้นด้านล่าง** ใช้ **สีฐานของ Phase** ที่การ์ดนั้นสังกัด (ทุกการ์ดใน phase เดียวกันใช้สีเดียวกัน) |
-| **2. บรรทัด Output สีเขียว** | process มีเอกสารสถานะ **Published ≥ 1** | เปลี่ยนสีข้อความบรรทัด Output ทั้งบรรทัดเป็น **`#008080`** |
+| **2. บรรทัด Output แสดงชื่อเอกสารที่อนุมัติแล้ว** | process มีเอกสาร/ลิงก์สถานะ **approved หรือ published ≥ 1 รายการ** | แทนที่ข้อความ Output แบบ static (จาก `lib/blueprint.ts`) ด้วย **ชื่อเอกสารจริง 8 ตัวอักษรแรก** (+ "…" ถ้ายาวกว่านั้น) ของทุกรายการที่เข้าเงื่อนไข คั่นด้วย `, ` · ทั้งบรรทัดเป็นสี **`#008080`** · ป้าย **`Output:`** (ตัวหนา) ยังคงอยู่เหมือนเดิม · ถ้ายังไม่มีรายการเข้าเงื่อนไขเลย แสดงข้อความ static เดิมตามปกติ (สีปกติ) |
 
-> 2 เอฟเฟกต์ใช้ **คนละเงื่อนไข**: เฉด = "มีไฟล์", Output เขียว = "มี Published"
-> (การ์ดอาจมีเฉดแต่ Output ยังไม่เขียว = มีไฟล์แต่ยังไม่มีตัวที่เผยแพร่)
+> ปรับ 2026-10-09: เดิมกติกาข้อ 2 trigger ด้วย "published" อย่างเดียวและเปลี่ยนแค่สี (ไม่เปลี่ยนข้อความ)
+> — ตอนนี้ trigger กว้างขึ้นเป็น "approved หรือ published" (เอกสารที่เคย publish แล้วยังนับต่อ ไม่ย้อนกลับไปโชว์ข้อความเดิม)
+> และเปลี่ยนทั้งข้อความ ไม่ใช่แค่สีอีกต่อไป
 
 ## สีที่ใช้ (tint จากสีฐาน Phase — โทนอ่อนเพื่อคงการอ่านออก)
 
@@ -29,30 +30,34 @@
 - เฉดจงใจอยู่ในช่วง tint อ่อน (สูงสุด .22) เพื่อให้หัวข้อ/bullet/Output ยังอ่านชัด
 - การ์ด Platform (#19–21 / Y18–Y20) **ไม่เข้าเงื่อนไข** (ไม่ใช่ process จัดเก็บเอกสาร → ไม่มีไฟล์)
 
-## การ query "process ไหนมีเอกสาร"
+## การ query "process ไหนมีเอกสาร / เอกสารไหนอนุมัติแล้ว"
 
 ฟังก์ชัน **`getProcessDocFlags()`** ใน [`lib/documents.ts`](../lib/documents.ts):
 
 ```ts
-// คืน 2 Set (key = slug ของ process เช่น "y07")
 {
-  withDocs:      Set<string>  // process ที่มีเอกสาร ≥1  → ทาเฉดพื้น
-  withPublished: Set<string>  // process ที่มี Published ≥1 → Output เขียว
+  withDocs:       Set<string>              // process ที่มีเอกสาร ≥1 (ทุกสถานะ) → ทาเฉดพื้น
+  approvedTitles: Map<string, string[]>    // slug → ชื่อเอกสาร (ตัดแล้ว) ที่ approved/published
 }
 ```
 
-วิธีคำนวณ: `SELECT p.slug, d.status FROM documents d JOIN processes p …` แล้ว reduce ใน JS
-เป็น 2 Set (query เดียว, aggregate ราคาถูก · ปริมาณข้อมูล single-tenant น้อย)
+วิธีคำนวณ: `SELECT p.slug, d.status, d.title FROM documents d JOIN processes p …`
+(`ORDER BY d.title` เพื่อให้ลำดับชื่อที่ join ด้วย comma คงที่) แล้ว reduce ใน JS
+(query เดียว, aggregate ราคาถูก · ปริมาณข้อมูล single-tenant น้อย)
+
+ชื่อแต่ละรายการผ่าน **`truncateDocTitle()`** (ใน `lib/documents.ts` เดียวกัน) — ตัดเหลือ
+8 ตัวอักษรแรก + `"…"` ถ้ายาวกว่านั้น
 
 ## ไฟล์ที่เกี่ยวข้อง
 | ไฟล์ | บทบาท |
 |---|---|
-| `lib/documents.ts` | `getProcessDocFlags()` |
-| `app/page.tsx` | เรียก flags → ส่ง `hasDocs` / `hasPublished` เข้า `<Card>` → ใส่ class `filled-p{n}` / `out-pub` |
-| `app/globals.css` | `.card.filled-p1…p4` (gradient) · `.out.out-pub` (`#008080`) |
+| `lib/documents.ts` | `getProcessDocFlags()` · `truncateDocTitle()` |
+| `app/page.tsx` | เรียก flags → ส่ง `hasDocs` / `approvedTitles` เข้า `<Card>` → ใส่ class `filled-p{n}` / `out-pub` + สลับข้อความ Output |
+| `app/globals.css` | `.card.filled-p1…p4` (gradient) · `.out.out-pub` (`#008080`, class เดิม ใช้ต่อ) |
 
 ## หมายเหตุ / ผลกระทบ
 - หน้า landing เดิม static ล้วน → ตอนนี้ query DB 1 ครั้งต่อการโหลด (dynamic อยู่แล้วเพราะ `auth()` ใน AppBar)
 - **ไม่แตะ** logic ของ workflow / Drive / schema / auth
-- เอฟเฟกต์อัปเดตอัตโนมัติเมื่อสถานะเอกสารเปลี่ยน (เช็คอิน → มีเฉด · เผยแพร่ → Output เขียว) เมื่อรีเฟรชหน้า
+- เอฟเฟกต์อัปเดตอัตโนมัติเมื่อสถานะเอกสารเปลี่ยน (เช็คอิน → มีเฉด · อนุมัติ/เผยแพร่ → เปลี่ยนข้อความ Output) เมื่อรีเฟรชหน้า
 - **ลบเอกสารร่างตัวสุดท้ายในกระบวนการ → เฉดพื้นหายอัตโนมัติ** (withDocs อ่านจำนวนเอกสารสด ไม่มีเอกสาร = ไม่มีคลาส `filled-p{n}`)
+- ถ้าเอกสารที่ approved/published ถูกลบ/เปลี่ยนสถานะกลับ (เช่น `superseded`) จนไม่เหลือรายการเข้าเงื่อนไขเลย → Output กลับไปแสดงข้อความ static เดิมอัตโนมัติ
