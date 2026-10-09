@@ -59,6 +59,7 @@ export default async function ProcessPage({
     externalUrl: d.externalUrl,
     updatedAt: d.updatedAt.toISOString(),
     uploadedByName: d.uploadedByName,
+    currentVersionUploadedBy: d.currentVersionUploadedBy,
     createdBy: d.createdBy,
     reviewerId: d.reviewerId,
     approverId: d.approverId,

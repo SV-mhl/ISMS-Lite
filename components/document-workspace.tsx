@@ -20,6 +20,7 @@ export type DocRow = {
   externalUrl: string | null;
   updatedAt: string; // ISO
   uploadedByName: string | null;
+  currentVersionUploadedBy: string | null;
   createdBy: string;
   reviewerId: string | null;
   approverId: string | null;
@@ -267,8 +268,9 @@ export default function DocumentWorkspace({
 
   function actionsFor(d: DocRow) {
     const acts: { action: ActionType; label: string; color: string }[] = [];
-    const isOwner = d.createdBy === currentUser.id || currentUser.role === "admin";
-    if ((d.status === "draft" || d.status === "rejected") && isOwner) {
+    const canSubmit =
+      currentUser.role === "admin" || d.currentVersionUploadedBy === currentUser.id;
+    if ((d.status === "draft" || d.status === "rejected") && canSubmit) {
       acts.push({ action: "submit", label: "ส่งตรวจ", color: "#1a4c9e" });
     }
     if (d.status === "review" && d.pendingTask?.type === "review" && d.pendingTask.assigneeId === currentUser.id) {

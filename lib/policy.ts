@@ -4,6 +4,9 @@
 export type DocLite = {
   status: string;
   createdBy: string;
+  // who checked in the current version — may differ from createdBy if
+  // someone else (e.g. admin) uploaded a later version
+  currentVersionUploadedBy?: string | null;
   reviewerId: string | null;
   approverId: string | null;
   effectiveVersionId?: string | null;
@@ -47,9 +50,11 @@ export type WorkflowAction = "submit" | "review" | "approve" | "reject" | "publi
  *  Mirrors the server-side guards in lib/workflow.ts. */
 export function availableActions(doc: DocLite, user: UserLite): WorkflowAction[] {
   const acts: WorkflowAction[] = [];
-  const isOwner = doc.createdBy === user.id || user.role === "admin";
+  // Only the person who checked in the current version may submit it for
+  // review — not just anyone who created the document shell (admin exempt).
+  const canSubmit = user.role === "admin" || doc.currentVersionUploadedBy === user.id;
 
-  if ((doc.status === "draft" || doc.status === "rejected") && isOwner) {
+  if ((doc.status === "draft" || doc.status === "rejected") && canSubmit) {
     acts.push("submit");
   }
   if (doc.status === "review" && doc.pendingTask?.type === "review" && doc.pendingTask.assigneeId === user.id) {

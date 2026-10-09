@@ -18,6 +18,7 @@ function doc(overrides: Partial<DocLite> = {}): DocLite {
   return {
     status: "draft",
     createdBy: "u-author",
+    currentVersionUploadedBy: "u-author",
     reviewerId: "u-rev",
     approverId: "u-app",
     pendingTask: null,
@@ -62,12 +63,19 @@ describe("watermarkMainText", () => {
 });
 
 describe("availableActions", () => {
-  it("author can submit a draft", () => {
+  it("uploader of the current version can submit a draft", () => {
     expect(availableActions(doc({ status: "draft" }), author)).toContain("submit");
     expect(availableActions(doc({ status: "draft" }), reviewer)).not.toContain("submit");
   });
-  it("author can resubmit a rejected doc", () => {
+  it("uploader can resubmit a rejected doc", () => {
     expect(availableActions(doc({ status: "rejected" }), author)).toContain("submit");
+  });
+  it("admin can always submit, even if not the uploader", () => {
+    expect(availableActions(doc({ status: "draft" }), admin)).toContain("submit");
+  });
+  it("document creator who is NOT the current version's uploader cannot submit", () => {
+    const d = doc({ status: "draft", createdBy: "u-author", currentVersionUploadedBy: "u-other" });
+    expect(availableActions(d, author)).not.toContain("submit");
   });
   it("assigned reviewer sees review + reject at review gate", () => {
     const d = doc({ status: "review", pendingTask: { type: "review", assigneeId: "u-rev" } });

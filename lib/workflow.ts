@@ -5,7 +5,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { documents, workflowTasks } from "@/lib/db/schema";
+import { documents, documentVersions, workflowTasks } from "@/lib/db/schema";
 import { logEvent } from "@/lib/events";
 import { notify, notifyMany } from "@/lib/notify";
 
@@ -46,14 +46,31 @@ async function cancelPending(documentId: string) {
     );
 }
 
+/** Only the person who checked in the current version (or an admin) may
+ *  submit it for review — this is the real enforcement; lib/policy.ts
+ *  mirrors it for UI button visibility. */
+async function assertCanSubmit(doc: { currentVersionId: string | null }, userId: string, userRole: string) {
+  if (userRole === "admin") return;
+  const [version] = doc.currentVersionId
+    ? await db
+        .select({ uploadedBy: documentVersions.uploadedBy })
+        .from(documentVersions)
+        .where(eq(documentVersions.id, doc.currentVersionId))
+    : [];
+  if (!version || version.uploadedBy !== userId) {
+    throw new WorkflowError("เฉพาะผู้ที่อัปโหลดเอกสาร/ลิงก์นี้เท่านั้นที่ส่งตรวจได้", 403);
+  }
+}
+
 /** Author submits a draft/rejected doc for review with chosen reviewer + approver. */
 export async function submitForReview(params: {
   documentId: string;
   reviewerId: string;
   approverId: string;
   userId: string;
+  userRole: string;
 }) {
-  const { documentId, reviewerId, approverId, userId } = params;
+  const { documentId, reviewerId, approverId, userId, userRole } = params;
   const doc = await getDoc(documentId);
   if (doc.status !== "draft" && doc.status !== "rejected") {
     throw new WorkflowError("ส่งตรวจได้เฉพาะเอกสารสถานะ ร่าง หรือ ตีกลับ");
@@ -61,6 +78,7 @@ export async function submitForReview(params: {
   if (!reviewerId || !approverId) {
     throw new WorkflowError("กรุณาเลือกผู้ตรวจและผู้อนุมัติ");
   }
+  await assertCanSubmit(doc, userId, userRole);
 
   await cancelPending(documentId);
   await db

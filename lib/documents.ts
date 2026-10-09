@@ -88,6 +88,7 @@ export type DocumentListItem = {
   fileName: string | null;
   updatedAt: Date;
   uploadedByName: string | null;
+  currentVersionUploadedBy: string | null; // who checked in the current version (may differ from createdBy)
   createdBy: string;
   reviewerId: string | null;
   approverId: string | null;
@@ -122,6 +123,7 @@ export async function listDocuments(processId: string): Promise<DocumentListItem
       docKind: documentVersions.docKind,
       externalUrl: documentVersions.externalUrl,
       uploadedByName: users.name,
+      currentVersionUploadedBy: documentVersions.uploadedBy,
     })
     .from(documents)
     .leftJoin(documentVersions, eq(documents.currentVersionId, documentVersions.id))

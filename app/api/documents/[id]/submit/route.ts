@@ -16,6 +16,7 @@ export async function POST(
       reviewerId: String(body.reviewerId ?? ""),
       approverId: String(body.approverId ?? ""),
       userId: user.id,
+      userRole: user.role,
     });
     return NextResponse.json({ ok: true });
   } catch (err) {
