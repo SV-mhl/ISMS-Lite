@@ -3,6 +3,7 @@ import { requireUser, AuthError } from "@/lib/auth-guard";
 import { getProcessBySlug, checkInNewDocument, checkInNewUrlDocument } from "@/lib/documents";
 import { DriveConfigError } from "@/lib/google/drive";
 import { isUrlCheckinEnabled } from "@/lib/feature-flags";
+import { UnsupportedFileTypeError } from "@/lib/upload";
 
 const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 
@@ -73,7 +74,7 @@ export async function POST(
 
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
-    if (err instanceof AuthError) {
+    if (err instanceof AuthError || err instanceof UnsupportedFileTypeError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     if (err instanceof DriveConfigError) {

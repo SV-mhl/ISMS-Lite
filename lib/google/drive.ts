@@ -10,6 +10,12 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { getValidAccessToken } from "@/lib/google/tokens";
+import { imageToPdf } from "@/lib/pdf";
+import {
+  OFFICE_MIME_TO_GOOGLE,
+  IMAGE_MIME_TYPES,
+  assertAcceptedCheckinMimeType,
+} from "@/lib/upload";
 
 export class DriveConfigError extends Error {}
 
@@ -105,13 +111,16 @@ export type UploadedFile = {
   webViewLink: string | null;
 };
 
-/** Upload a file into a folder (a "check-in"). */
+/** Upload a file into a folder (a "check-in"). Rejects file types the
+ *  PDF-export pipeline can't handle — this is the single chokepoint every
+ *  check-in route (new doc, new version, revision) funnels through. */
 export async function uploadFile(
   parentFolderId: string,
   name: string,
   mimeType: string,
   buffer: Buffer,
 ): Promise<UploadedFile> {
+  assertAcceptedCheckinMimeType(mimeType);
   const { drive } = await getDrive();
   const res = await drive.files.create({
     requestBody: { name, parents: [parentFolderId] },
@@ -149,22 +158,13 @@ export async function downloadFileBuffer(fileId: string): Promise<Buffer> {
   return Buffer.from(res.data as ArrayBuffer);
 }
 
-// Office → Google format mapping for PDF conversion.
-const OFFICE_TO_GOOGLE: Record<string, string> = {
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-    "application/vnd.google-apps.document",
-  "application/msword": "application/vnd.google-apps.document",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-    "application/vnd.google-apps.spreadsheet",
-  "application/vnd.ms-excel": "application/vnd.google-apps.spreadsheet",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation":
-    "application/vnd.google-apps.presentation",
-  "application/vnd.ms-powerpoint": "application/vnd.google-apps.presentation",
-};
+// Office → Google format mapping for PDF conversion (canonical copy in lib/upload.ts).
+const OFFICE_TO_GOOGLE = OFFICE_MIME_TO_GOOGLE;
 
 /**
  * Render any supported file to PDF bytes.
  * - PDF → passthrough
+ * - JPEG/PNG → wrapped as a single-page PDF (lib/pdf.ts imageToPdf)
  * - Google-native (docs/sheets/slides) → export
  * - Office → copy-convert to Google format, export, delete temp copy
  * Used by the published PDF-only download (Step 6).
@@ -177,6 +177,11 @@ export async function exportToPdf(
 
   if (mimeType === "application/pdf") {
     return downloadFileBuffer(fileId);
+  }
+
+  if (IMAGE_MIME_TYPES.includes(mimeType)) {
+    const raw = await downloadFileBuffer(fileId);
+    return imageToPdf(raw, mimeType);
   }
 
   if (mimeType.startsWith("application/vnd.google-apps")) {

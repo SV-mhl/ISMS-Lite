@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireUser, AuthError } from "@/lib/auth-guard";
 import { addNewVersion } from "@/lib/documents";
 import { DriveConfigError } from "@/lib/google/drive";
+import { UnsupportedFileTypeError } from "@/lib/upload";
 
 const MAX_BYTES = 25 * 1024 * 1024;
 
@@ -35,7 +36,7 @@ export async function POST(
 
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
-    if (err instanceof AuthError) {
+    if (err instanceof AuthError || err instanceof UnsupportedFileTypeError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     if (err instanceof DriveConfigError) {

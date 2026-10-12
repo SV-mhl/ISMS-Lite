@@ -3,6 +3,19 @@
 
 import { PDFDocument, StandardFonts, degrees, rgb } from "pdf-lib";
 
+/** Wrap a JPEG/PNG image as a single-page PDF (one page, image sized to fit). */
+export async function imageToPdf(image: Buffer, mimeType: string): Promise<Buffer> {
+  const pdf = await PDFDocument.create();
+  const embedded =
+    mimeType === "image/png" ? await pdf.embedPng(image) : await pdf.embedJpg(image);
+
+  const page = pdf.addPage([embedded.width, embedded.height]);
+  page.drawImage(embedded, { x: 0, y: 0, width: embedded.width, height: embedded.height });
+
+  const bytes = await pdf.save();
+  return Buffer.from(bytes);
+}
+
 export async function watermarkPdf(
   input: Buffer,
   opts: { mainText: string; footer: string },

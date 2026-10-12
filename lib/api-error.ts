@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { AuthError } from "@/lib/auth-guard";
 import { WorkflowError } from "@/lib/workflow";
 import { DriveConfigError } from "@/lib/google/drive";
+import { UnsupportedFileTypeError } from "@/lib/upload";
 
 /** Map known domain errors to JSON responses; log + 500 otherwise. */
 export function errorResponse(err: unknown): NextResponse {
-  if (err instanceof AuthError || err instanceof WorkflowError) {
+  if (err instanceof AuthError || err instanceof WorkflowError || err instanceof UnsupportedFileTypeError) {
     return NextResponse.json({ error: err.message }, { status: err.status });
   }
   if (err instanceof DriveConfigError) {

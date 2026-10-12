@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import StatusBadge from "./status-badge";
+import { ACCEPTED_CHECKIN_ACCEPT_ATTR } from "@/lib/upload";
 
 export type UserOption = { id: string; name: string | null; email: string };
 
@@ -324,7 +325,7 @@ export default function DocumentWorkspace({
             style={{ flex: "1 1 260px", padding: "9px 12px", border: "1px solid #d7e0ec", borderRadius: 8, fontSize: 13.5 }}
           />
         ) : (
-          <input id="new-doc-file" type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} style={{ fontSize: 13, flex: "1 1 200px" }} />
+          <input id="new-doc-file" type="file" accept={ACCEPTED_CHECKIN_ACCEPT_ATTR} onChange={(e) => setFile(e.target.files?.[0] ?? null)} style={{ fontSize: 13, flex: "1 1 200px" }} />
         )}
         <button type="submit" disabled={busy} className="btn-google" style={{ marginLeft: 0, opacity: busy ? 0.6 : 1 }}>
           {busy ? "กำลังเช็คอิน…" : "⬆️ เช็คอิน"}
@@ -332,7 +333,7 @@ export default function DocumentWorkspace({
         {error && <div style={{ width: "100%", color: "#b23b3b", fontSize: 12.5 }}>{error}</div>}
       </form>
 
-      <input ref={versionInputRef} type="file" style={{ display: "none" }} onChange={onVersionPicked} />
+      <input ref={versionInputRef} type="file" accept={ACCEPTED_CHECKIN_ACCEPT_ATTR} style={{ display: "none" }} onChange={onVersionPicked} />
 
       {/* Document list */}
       {documents.length === 0 ? (
@@ -548,7 +549,7 @@ export default function DocumentWorkspace({
             </div>
 
             <label style={labelStyle}>ไฟล์เวอร์ชันใหม่</label>
-            <input type="file" onChange={(e) => setCheckinFile(e.target.files?.[0] ?? null)} style={{ fontSize: 13 }} />
+            <input type="file" accept={ACCEPTED_CHECKIN_ACCEPT_ATTR} onChange={(e) => setCheckinFile(e.target.files?.[0] ?? null)} style={{ fontSize: 13 }} />
 
             <div style={{ fontSize: 11.5, color: "#7189a8", marginTop: 10, lineHeight: 1.6 }}>
               เวอร์ชันเดิมที่เผยแพร่ยังดาวน์โหลดได้ระหว่างที่รุ่นใหม่ยังไม่ผ่านอนุมัติ · รุ่นใหม่จะเริ่มที่สถานะ “ร่าง” และต้องเดิน workflow ใหม่
